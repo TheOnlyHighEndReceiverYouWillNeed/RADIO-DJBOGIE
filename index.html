@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Radio Console</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        :root { --amber-glow: #ffb733; }
+        html, body { max-width: 100%; overflow-x: hidden; box-sizing: border-box; margin: 0; padding: 0; }
+        *, *:before, *:after { box-sizing: inherit; }
+        body {
+            background: #0b0604 url('photo/background.png') center/cover fixed no-repeat;
+            color: #d8c2a8; font-family: system-ui, -apple-system, sans-serif;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh; min-height: 100dvh; padding: 20px; user-select: none;
+        }
+        body::before {
+            content: ''; position: fixed; inset: 0; background: rgba(11, 6, 4, 0.75); pointer-events: none; z-index: 1;
+        }
+        .console-container {
+            position: relative; width: 100%; max-width: 900px; aspect-ratio: 16 / 9;
+            background: #2b1408 url('photo/radioconsole image.jpg') center/100% 100% no-repeat;
+            box-shadow: 0 35px 75px rgba(0,0,0,0.95); border-radius: 12px; overflow: hidden; z-index: 2;
+        }
+        .interactive-volume { position: absolute; top: 24%; left: 5.5%; width: 8%; height: 20%; cursor: pointer; border-radius: 50%; }
+        .interactive-tuning { position: absolute; top: 24%; right: 5.5%; width: 8%; height: 20%; cursor: pointer; border-radius: 50%; }
+        .interactive-dial { position: absolute; top: 21.5%; left: 17%; right: 17%; height: 27%; cursor: pointer; }
+        .tuning-indicator-bar {
+            position: absolute; top: 27.3%; height: 5.2%; width: 10px;
+            background: linear-gradient(to bottom, rgba(255,150,0,0.6), #ffe885 50%, rgba(255,150,0,0.6));
+            border-radius: 2px; box-shadow: 0 0 10px 2px var(--amber-glow), inset 0 0 3px #fff;
+            transform: translateX(-50%); pointer-events: none; transition: left 0.05s ease-out; z-index: 3;
+        }
+        .screen-display {
+            position: absolute; top: 53.5%; left: 27%; right: 27%; height: 10.5%;
+            background: rgba(18, 10, 4, 0.85); border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 4px;
+            display: flex; align-items: center; justify-content: center; font-size: 11px;
+            color: var(--amber-glow); letter-spacing: 1px; text-shadow: 0 0 8px var(--amber-glow);
+            box-shadow: inset 0 0 10px rgba(255, 157, 0, 0.2); padding: 0 10px; text-align: center; z-index: 5;
+        }
+        .visualizer { position: absolute; top: 73.5%; left: 5%; right: 5%; height: 12.5%; pointer-events: none; z-index: 4; }
+        #visualizerCanvas { display: block; width: 100%; height: 100%; }
+    </style>
+</head>
+<body>
+    <div class="console-container">
+        <div class="interactive-volume" id="volumeTrigger"></div>
+        <div id="tuningBar" class="tuning-indicator-bar" style="left: 50%;"></div>
+        <div class="interactive-dial" id="dialWindow"></div>
+        <div class="interactive-tuning" id="tuningTrigger"></div>
+        <div class="screen-display" id="stationDisplay">RECEIVER STATUS: STANDBY... CLICK TO POWER ON</div>
+        <div class="visualizer"><canvas id="visualizerCanvas"></canvas></div>
+    </div>
+    <audio id="mainAudio" preload="auto" crossorigin="anonymous" playsinline></audio>
+    <script>
+        const tuningBar = document.getElementById('tuningBar');
+        const stationDisplay = document.getElementById('stationDisplay');
+        const audioEl = document.getElementById('mainAudio');
+        const dialWindow = document.getElementById('dialWindow');
+        const canvas = document.getElementById('visualizerCanvas');
+        const ctx = canvas ? canvas.getContext('2d') : null;
+
+        let audioCtx = null, analyser = null, sourceNode = null, gainNode = null, hls = null;
+        let isPowerOn = false, particles = [];
+
+        function initParticles(w, h) {
+            particles = Array.from({length: 20}, () => ({
+                x: Math.random() * w, y: Math.random() * h,
+                size: Math.random() * 2 + 0.5, speed: Math.random() * 0.4 + 0.1, opacity: Math.random() * 0.3 + 0.1
+            }));
+        }
+
+        function resize() {
+            if (!canvas || !ctx) return;
+            const rect = canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            initParticles(rect.width, rect.height);
+        }
+
+        function initAudio() {
+            if (audioCtx) return;
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 1024; analyser.smoothingTimeConstant = 0.6;
+                gainNode = audioCtx.createGain();
+                gainNode.gain.setValueAtTime(0.8, audioCtx.currentTime);
+                sourceNode = audioCtx.createMediaElementSource(audioEl);
+                sourceNode.connect(gainNode);
+                gainNode.connect(analyser);
+                analyser.connect(audioCtx.destination);
+            } catch (e) { console.error(e); }
+        }
+
+        function draw() {
+            requestAnimationFrame(draw);
+            if (!canvas || !ctx) return;
+            const rect = canvas.getBoundingClientRect();
+            const w = rect.width, h = rect.height;
+            ctx.clearRect(0, 0, w, h);
+
+            particles.forEach(p => {
+                p.x -= p.speed; if (p.x < 0) p.x = w;
+                ctx.fillStyle = `rgba(255, 157, 0, ${p.opacity})`;
+                ctx.fillRect(p.x, p.y, p.size, p.size);
+            });
+
+            const buf = analyser ? analyser.frequencyBinCount : 512;
+            const data = new Uint8Array(buf);
+            if (analyser && isPowerOn && !audioEl.paused && audioEl.readyState >= 2) {
+                analyser.getByteTimeDomainData(data);
+            } else {
+                data.fill(128);
+            }
+
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = (isPowerOn && !audioEl.paused && audioEl.readyState >= 2) ? 'rgba(255, 157, 0, 0.85)' : 'rgba(74, 44, 0, 0.4)';
+            ctx.beginPath();
+            const slice = w / buf;
+            for (let i = 0, x = 0; i < buf; i++, x += slice) {
+                const y = ((data[i] / 128.0) - 1.0) * (h * 1.1) + (h / 2);
+                i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+
+        window.addEventListener('resize', resize);
+        resize(); requestAnimationFrame(draw);
+
+        const stations = {
+            88.0: { name: "ICI Première / Montréal", file: "https://rcavliveaudio.akamaized.net/hls/live/2006635/P-2QMTL0_MTL/master.m3u8", isLive: true },
+            88.5: { name: "Iota", file: "audio/across bourbon street.mp3" },
+            89.0: { name: "Iota Alpha", file: "audio/always.mp3" },
+            89.5: { name: "Lambda Epsilon", file: "audio/arise.mp3" },
+            90.0: { name: "Kappa Zeta", file: "audio/automatism.mp3" },
+            90.5: { name: "Kappa Epsilon", file: "audio/bang.mp3" },
+            91.0: { name: "Mu Delta", file: "audio/bliss.mp3" },
+            91.5: { name: "Lambda Delta", file: "audio/chase.mp3" },
+            92.0: { name: "Lambda Eta", file: "audio/cinderella shoe.mp3" },
+            92.5: { name: "Iota Delta", file: "audio/cohesion.mp3" },
+            93.0: { name: "Mu Beta", file: "audio/dancer.mp3" },
+            93.5: { name: "Lambda Theta", file: "audio/dynamite.mp3" },
+            94.0: { name: "Mu", file: "audio/equanimity.mp3" },
+            94.5: { name: "Kappa Alpha", file: "audio/esprit itinerant.mp3" },
+            95.0: { name: "Lambda Alpha", file: "audio/estrange.mp3" },
+            95.1: { name: "Duo Improbable - Stewart Copeland: Police Deranged for Orchestra & Sting - King of Pain", file: "audio/King of Pain.MP3" },
+            95.3: { name: "Duo Improbable - Eric Carmen & Céline Dion - All By Myself", file: "audio/All by Myself.MP3" },
+            95.5: { name: "Duo Improbable - Trent Reznor & Johnny Cash - Hurt", file: "audio/Hurt.MP3" },
+            95.7: { name: "Duo Improbable - Donna Summer & Clara Luciani - I Feel Love ~ C'est L'Amour", file: "audio/I Feel Love Donna Summer ~  C'est L'Amour Clara Luciani V2.wav" },
+            96.0: { name: "Lambda Mu", file: "audio/father.mp3" },
+            96.5: { name: "Lambda Stigma", file: "audio/grave.mp3" },
+            97.0: { name: "Kappa Eta", file: "audio/inversion.mp3" },
+            97.5: { name: "Mu Alpha", file: "audio/lucioles.mp3" },
+            97.8: { name: "Sud Radio en ligne", file: "https://start-sud.ice.infomaniak.ch/start-sud-high.mp3", isLive: true },
+            98.0: { name: "Kappa Gamma", file: "audio/mass effect.mp3" },
+            98.5: { name: "ICI Musique Classique", file: "https://rcavliveaudio.akamaized.net/hls/live/2007000/MUSE/master.m3u8", isLive: true },
+            99.0: { name: "Iota Stigma", file: "audio/melancoly in flat.mp3" },
+            99.5: { name: "Mu Epsilon", file: "audio/monster.mp3" },
+            100.0: { name: "Iota Epsilon", file: "audio/Narcosis.mp3" },
+            100.5: { name: "Lambda Nu", file: "audio/next flight home.mp3" },
+            101.0: { name: "Lambda", file: "audio/oticons.mp3" },
+            101.5: { name: "Lambda Gamma", file: "audio/pacis.mp3" },
+            102.0: { name: "Iota Zeta", file: "audio/push.mp3" },
+            102.5: { name: "Kappa Theta", file: "audio/quantum touch.mp3" },
+            103.0: { name: "Mu Zeta", file: "audio/quaturo.mp3" },
+            103.5: { name: "Iota Eta", file: "audio/recalcitrant.mp3" },
+            104.0: { name: "Iota Zeta", file: "audio/resounding.mp3" },
+            104.5: { name: "Lambda Xi", file: "audio/sacrifice.mp3" },
+            105.0: { name: "Iota", file: "audio/slow think.mp3" },
+            105.5: { name: "Kappa Iota", file: "audio/soleil.mp3" },
+            106.0: { name: "Kappa Delta", file: "audio/spectrum.mp3" },
+            106.5: { name: "Lambda Zeta", file: "audio/stubborness.mp3" },
+            107.0: { name: "Mu Theta", file: "audio/tangerine.mp3" },
+            107.5: { name: "Kappa Beta", file: "audio/the daunting.mp3" },
+            108.0: { name: "ICI Première / Ottawa", file: "https://rcavliveaudio.akamaized.net/hls/live/2006986/M-7OOTT0_OTT/master.m3u8", isLive: true }
+        };
+
+        const stationKeys = Object.keys(stations).map(Number);
+
+        audioEl.addEventListener('error', (e) => {
+            const currentSrc = audioEl.currentSrc || "unknown source";
+            stationDisplay.textContent = `[ ERROR ] Failed to load file: ${currentSrc.split('/').pop()}`;
+            console.error("Audio element error:", audioEl.error);
+        });
+
+        function playSource(url, isLive) {
+            if (!isPowerOn) return;
+            if (hls) { hls.destroy(); hls = null; }
+            audioEl.pause(); audioEl.src = ""; audioEl.loop = !isLive;
+
+            if (isLive && url.endsWith('.m3u8')) {
+                if (Hls.isSupported()) {
+                    hls = new Hls(); hls.loadSource(url); hls.attachMedia(audioEl);
+                    hls.on(Hls.Events.MANIFEST_PARSED, () => audioEl.play().catch(() => {}));
+                } else if (audioEl.canPlayType('application/vnd.apple.mpegurl')) {
+                    audioEl.src = url; audioEl.load(); audioEl.play().catch(() => {});
+                }
+            } else {
+                audioEl.src = url; audioEl.load(); 
+                audioEl.play().catch((err) => {
+                    console.warn("Playback prevented or failed:", err);
+                });
+            }
+        }
+
+        function tune(targetFreq) {
+            if (!isPowerOn) return;
+
+            const closest = stationKeys.reduce((p, c) => Math.abs(c - targetFreq) < Math.abs(p - targetFreq) ? c : p);
+
+            const percent = 18.0 + ((closest - 88.0) / 20.0) * 64.0;
+            tuningBar.style.left = `${percent}%`;
+
+            const s = stations[closest];
+            stationDisplay.textContent = `[ ${s.isLive ? 'LIVE' : 'PLAYING'} ] > ${s.name} (${closest.toFixed(1)} MHz)`;
+            playSource(s.file, s.isLive);
+        }
+
+        dialWindow.addEventListener('click', (e) => {
+            if (!isPowerOn) {
+                isPowerOn = true; initAudio();
+                if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+                tune(88.0); return;
+            }
+            const rect = dialWindow.getBoundingClientRect();
+            const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            const clickedFreq = Number((88.0 + (ratio * 20.0)).toFixed(1));
+            tune(clickedFreq);
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const wake = () => {
+                if (!isPowerOn) {
+                    isPowerOn = true; initAudio();
+                    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+                    tune(88.0);
+                }
+                window.removeEventListener('click', wake);
+                window.removeEventListener('touchstart', wake);
+            };
+            window.addEventListener('click', wake);
+            window.addEventListener('touchstart', wake);
+        });
+    </script>
+</body>
+</html>
