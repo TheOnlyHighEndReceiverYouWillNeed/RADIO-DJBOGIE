@@ -94,6 +94,7 @@
 
         let audioCtx = null, analyser = null, sourceNode = null, gainNode = null, hls = null;
         let isPowerOn = false, particles = [], analyserData = null;
+        let currentStation = null;
 
         function initParticles(w, h) {
             particles = Array.from({length: 20}, () => ({
@@ -211,18 +212,37 @@
 
         function playSource(url, isLive) {
             if (!isPowerOn) return;
-            if (hls) { hls.destroy(); hls = null; }
-            audioEl.pause(); audioEl.src = ""; audioEl.loop = !isLive;
+
+            // Guard: Do nothing if we are already playing this exact station
+            if (currentStation === url && !audioEl.paused) {
+                return;
+            }
+
+            currentStation = url;
+
+            if (hls) { 
+                hls.destroy(); 
+                hls = null; 
+            }
+
+            audioEl.pause(); 
+            audioEl.removeAttribute('src');
+            audioEl.load(); 
+            audioEl.loop = !isLive;
 
             if (isLive && url.toLowerCase().endsWith('.m3u8')) {
                 if (window.Hls && Hls.isSupported()) {
                     hls = new Hls({ enableWorker: true, lowLatencyMode: false, backBufferLength: 30 });
                     hls.attachMedia(audioEl);
                     hls.on(Hls.Events.MEDIA_ATTACHED, () => hls.loadSource(url));
-                    hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                        audioEl.play().catch(() => {
-                            stationDisplay.textContent += ' — TAP TO PLAY';
-                        });
+                    hls.on(Hls.Events.MANIFEST_PARSED, async () => {
+                        try {
+                            await audioEl.play();
+                            stationDisplay.textContent += ' > PLAYING';
+                        } catch (err) {
+                            console.error('HLS play failed:', err);
+                            stationDisplay.textContent += ' — TAP THE DIAL AGAIN TO PLAY';
+                        }
                     });
                     hls.on(Hls.Events.ERROR, (_event, data) => {
                         if (data && data.fatal) {
@@ -238,8 +258,11 @@
                 ) {
                     audioEl.src = url;
                     audioEl.load();
-                    audioEl.play().catch(() => {
-                        stationDisplay.textContent += ' — TAP TO PLAY';
+                    audioEl.play().then(() => {
+                        stationDisplay.textContent += ' > PLAYING';
+                    }).catch(err => {
+                        console.error('Native HLS play failed:', err);
+                        stationDisplay.textContent += ' — TAP THE DIAL AGAIN TO PLAY';
                     });
                 } else {
                     stationDisplay.textContent = 'HLS NOT SUPPORTED BY THIS BROWSER';
@@ -247,8 +270,11 @@
             } else {
                 audioEl.src = url;
                 audioEl.load();
-                audioEl.play().catch(() => {
-                    stationDisplay.textContent += ' — TAP TO PLAY';
+                audioEl.play().then(() => {
+                    stationDisplay.textContent += ' > PLAYING';
+                }).catch(err => {
+                    console.error('MP3 play failed:', err);
+                    stationDisplay.textContent = 'AUDIO PLAYBACK ERROR';
                 });
             }
         }
@@ -266,18 +292,28 @@
                 stationDisplay.textContent = `[ ${s.isLive ? 'LIVE' : 'LOCKED'} ] > ${s.name} (${closest.toFixed(1)} MHz)`;
                 playSource(s.file, s.isLive);
             } else {
+                currentStation = null;
                 if (hls) { hls.destroy(); hls = null; }
                 stationDisplay.textContent = `MUTED (DEAD AIR)... [ FREQ: ${freq.toFixed(1)} MHz ]`;
-                audioEl.pause(); audioEl.src = "";
+                audioEl.pause(); 
+                audioEl.removeAttribute('src');
+                audioEl.load();
             }
         }
 
-        function startReceiver() {
+        async function startReceiver() {
             if (isPowerOn) return;
             isPowerOn = true;
             initAudio();
-            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
-            tune(88.0);
+            if (audioCtx && audioCtx.state !== 'running') {
+                try {
+                    await audioCtx.resume();
+                } catch (e) {
+                    console.warn('AudioContext resume failed:', e);
+                }
+            }
+            // Start with 88.5 (local MP3) on initial boot to verify pipeline & bypass initial HLS gesture block
+            tune(88.5);
         }
 
         function tuneFromPointer(e) {
@@ -327,7 +363,6 @@
             });
         }
 
-        // Do not try to autoplay on page load. Mobile browsers block unsolicited audio.
         window.addEventListener('pageshow', resize);
     </script>
 </body>
