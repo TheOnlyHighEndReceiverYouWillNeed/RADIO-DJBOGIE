@@ -43,7 +43,8 @@
 
         .interactive-volume { position: absolute; top: 24%; left: 5.5%; width: 8%; height: 20%; cursor: pointer; border-radius: 50%; }
         .interactive-tuning { position: absolute; top: 24%; right: 5.5%; width: 8%; height: 20%; cursor: pointer; border-radius: 50%; }
-        .interactive-dial { position: absolute; top: 21.5%; left: 17%; right: 17%; height: 27%; cursor: pointer; }
+        .interactive-dial { position: absolute; top: 21.5%; left: 17%; right: 17%; height: 27%; cursor: grab; }
+        .interactive-dial:active { cursor: grabbing; }
         
         .tuning-indicator-bar {
             position: absolute; top: 27.3%; height: 5.2%; width: 10px;
@@ -96,6 +97,8 @@
 
         let audioCtx = null, analyser = null, sourceNode = null, gainNode = null, hls = null;
         let isPowerOn = false, particles = [];
+        let isDragging = false;
+        let currentTargetFreq = 88.0;
 
         function initParticles(w, h) {
             particles = Array.from({length: 20}, () => ({
@@ -245,28 +248,77 @@
             }
         }
 
-        function tune(targetFreq) {
+        let currentActiveFreq = null;
+
+        function tune(targetFreq, forceSwitch = false) {
             if (!isPowerOn) return;
 
             const closest = stationKeys.reduce((p, c) => Math.abs(c - targetFreq) < Math.abs(p - targetFreq) ? c : p);
-            const percent = 18.0 + ((closest - 88.0) / 20.0) * 64.0;
-            tuningBar.style.left = `${percent}%`;
+            
+            // Instantly glide the visual indicator bar smoothly
+            const percent = 18.0 + ((targetFreq - 88.0) / 20.0) * 64.0;
+            tuningBar.style.left = `${Math.max(18.0, Math.min(82.0, percent))}%`;
 
             const s = stations[closest];
             stationDisplay.textContent = `[ ${s.isLive ? 'LIVE' : 'PLAYING'} ] > ${s.name} (${closest.toFixed(1)} MHz)`;
-            playSource(s.file, s.isLive);
+
+            // Only switch audio stream if we landed on a different station
+            if (forceSwitch || currentActiveFreq !== closest) {
+                currentActiveFreq = closest;
+                playSource(s.file, s.isLive);
+            }
         }
 
-        dialWindow.addEventListener('click', (e) => {
+        function handleMove(clientX) {
+            const rect = dialWindow.getBoundingClientRect();
+            const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+            currentTargetFreq = 88.0 + (ratio * 20.0);
+            tune(currentTargetFreq, false);
+        }
+
+        dialWindow.addEventListener('mousedown', (e) => {
             if (!isPowerOn) {
                 isPowerOn = true; initAudio();
                 if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-                tune(88.0); return;
+                tune(88.0, true);
             }
-            const rect = dialWindow.getBoundingClientRect();
-            const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-            const clickedFreq = Number((88.0 + (ratio * 20.0)).toFixed(1));
-            tune(clickedFreq);
+            isDragging = true;
+            handleMove(e.clientX);
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            handleMove(e.clientX);
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                // Snap neatly to the exact closest station when releasing
+                tune(currentTargetFreq, true);
+            }
+        });
+
+        dialWindow.addEventListener('touchstart', (e) => {
+            if (!isPowerOn) {
+                isPowerOn = true; initAudio();
+                if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+                tune(88.0, true);
+            }
+            isDragging = true;
+            if (e.touches.length > 0) handleMove(e.touches[0].clientX);
+        }, {passive: true});
+
+        window.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            if (e.touches.length > 0) handleMove(e.touches.clientX);
+        }, {passive: true});
+
+        window.addEventListener('touchend', () => {
+            if (isDragging) {
+                isDragging = false;
+                tune(currentTargetFreq, true);
+            }
         });
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -274,7 +326,7 @@
                 if (!isPowerOn) {
                     isPowerOn = true; initAudio();
                     if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-                    tune(88.0);
+                    tune(88.0, true);
                 }
                 window.removeEventListener('click', wake);
                 window.removeEventListener('touchstart', wake);
