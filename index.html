@@ -1,90 +1,187 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Radio Console - Independent Broadcast</title>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <style>
-        :root { 
-            --amber-glow: #ffb733; 
-            --bg-dark: #050302;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050302">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Radio Console - Independent Broadcast</title>
 
-        html, body { 
-            width: 100%;
-            height: 100%;
-            overflow: hidden; 
-            box-sizing: border-box; 
-            margin: 0; 
-            padding: 0; 
-            background: var(--bg-dark);
-            color: #d8c2a8; 
-            font-family: system-ui, -apple-system, sans-serif;
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
-            user-select: none;
-            -webkit-user-select: none;
-            -webkit-touch-callout: none;
-        }
+<!-- HLS.js is used only where native HLS is unavailable. -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
-        *, *:before, *:after { box-sizing: inherit; }
+<style>
+:root {
+    --amber-glow:#ffb733;
+    --bg-dark:#050302;
+    --safe-top:env(safe-area-inset-top, 0px);
+    --safe-right:env(safe-area-inset-right, 0px);
+    --safe-bottom:env(safe-area-inset-bottom, 0px);
+    --safe-left:env(safe-area-inset-left, 0px);
+}
 
-        .console-container {
-            position: relative; 
-            width: 100vw;
-            height: 56.25vw; /* 16:9 aspect ratio */
-            max-height: 100vh;
-            max-width: 177.78vh;
-            background: #2b1408 url('photo/radioconsole image.jpg') center/100% 100% no-repeat;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.9);
-            overflow: hidden; 
-        }
+*,
+*::before,
+*::after { box-sizing:border-box; }
 
-        .interactive-volume { position: absolute; top: 24%; left: 5.5%; width: 8%; height: 20%; cursor: pointer; z-index: 4; }
-        .interactive-tuning { position: absolute; top: 24%; right: 5.5%; width: 8%; height: 20%; cursor: pointer; z-index: 4; }
-        .interactive-dial { position: absolute; top: 21.5%; left: 17%; right: 17%; height: 27%; cursor: pointer; touch-action: none; z-index: 4; }
-        
-        .tuning-indicator-bar {
-            position: absolute; 
-            top: 27.3%; 
-            height: 5.2%; 
-            width: 8px;
-            background: #ffe885;
-            border-radius: 2px; 
-            box-shadow: 0 0 8px var(--amber-glow);
-            transform: translateX(-50%); 
-            pointer-events: none; 
-            z-index: 3;
-        }
+html, body {
+    width:100%;
+    height:100%;
+    margin:0;
+    padding:0;
+    background:var(--bg-dark);
+    color:#d8c2a8;
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    overflow:hidden;
+    overscroll-behavior:none;
+    -webkit-user-select:none;
+    user-select:none;
+    -webkit-touch-callout:none;
+}
 
-        .screen-display {
-            position: absolute; top: 53.5%; left: 27%; right: 27%; height: 10.5%;
-            background: rgba(12, 6, 2, 0.95); border: 1px solid rgba(212, 175, 55, 0.2); border-radius: 4px;
-            display: flex; align-items: center; justify-content: center; font-size: 10px;
-            color: var(--amber-glow); letter-spacing: 1px; padding: 0 8px; text-align: center; z-index: 5;
-            font-family: monospace;
-        }
+body {
+    min-height:100dvh;
+    min-height:-webkit-fill-available;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
+}
 
-        .visualizer { position: absolute; top: 73.5%; left: 5%; right: 5%; height: 12.5%; pointer-events: none; z-index: 4; }
-        #visualizerCanvas { display: block; width: 100%; height: 100%; }
-    </style>
+.console-container {
+    position:relative;
+    width:min(100vw, calc(100dvh * 16 / 9));
+    height:min(100dvh, calc(100vw * 9 / 16));
+    width:min(100vw, calc(100svh * 16 / 9));
+    height:min(100svh, calc(100vw * 9 / 16));
+    max-width:100%;
+    max-height:100%;
+    aspect-ratio:16 / 9;
+    background:#2b1408 url('photo/radioconsole image.jpg') center / 100% 100% no-repeat;
+    overflow:hidden;
+    box-shadow:0 20px 40px rgba(0,0,0,.9);
+    touch-action:none;
+}
+
+/* Larger touch targets improve reliability on phones/tablets. */
+.interactive-volume,
+.interactive-tuning {
+    position:absolute;
+    top:20%;
+    width:12%;
+    height:28%;
+    min-width:44px;
+    min-height:44px;
+    cursor:pointer;
+    z-index:4;
+    touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent;
+}
+.interactive-volume { left:3.5%; }
+.interactive-tuning { right:3.5%; }
+
+.interactive-dial {
+    position:absolute;
+    top:18%;
+    left:14%;
+    right:14%;
+    height:32%;
+    cursor:pointer;
+    touch-action:none;
+    z-index:4;
+    -webkit-tap-highlight-color:transparent;
+}
+
+.tuning-indicator-bar {
+    position:absolute;
+    top:27.3%;
+    width:8px;
+    height:5.2%;
+    background:#ffe885;
+    border-radius:2px;
+    box-shadow:0 0 8px var(--amber-glow);
+    transform:translateX(-50%);
+    pointer-events:none;
+    z-index:3;
+}
+
+.screen-display {
+    position:absolute;
+    top:53.5%;
+    left:23%;
+    right:23%;
+    height:11.5%;
+    padding:0 10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(12,6,2,.95);
+    border:1px solid rgba(212,175,55,.2);
+    border-radius:4px;
+    color:var(--amber-glow);
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:clamp(8px, 1.2vw, 14px);
+    letter-spacing:clamp(.5px, .12vw, 1.5px);
+    line-height:1.2;
+    text-align:center;
+    overflow:hidden;
+    z-index:5;
+    pointer-events:auto;
+    touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent;
+}
+
+.visualizer {
+    position:absolute;
+    top:73.5%;
+    left:5%;
+    right:5%;
+    height:12.5%;
+    pointer-events:none;
+    z-index:4;
+}
+
+#visualizerCanvas {
+    display:block;
+    width:100%;
+    height:100%;
+}
+
+@media (orientation:portrait) {
+    .console-container {
+        width:100vw;
+        height:auto;
+        max-height:100dvh;
+        max-height:100svh;
+    }
+}
+
+/* Prevent accidental selection/zoom gestures without disabling normal scrolling
+   elsewhere (the page itself has no scrolling). */
+@media (hover:none) and (pointer:coarse) {
+    .interactive-dial,
+    .interactive-volume,
+    .interactive-tuning,
+    .screen-display { cursor:default; }
+}
+</style>
 </head>
+
 <body>
-    <div class="console-container">
-        <div class="interactive-volume" id="volumeTrigger"></div>
-        <div id="tuningBar" class="tuning-indicator-bar" style="left: 50%;"></div>
-        <div class="interactive-dial" id="dialWindow"></div>
-        <div class="interactive-tuning" id="tuningTrigger"></div>
-        <div class="screen-display" id="stationDisplay">TAP DIAL TO POWER ON</div>
-        <div class="visualizer"><canvas id="visualizerCanvas"></canvas></div>
-    </div>
+<div class="console-container" id="console">
+    <div class="interactive-volume" id="volumeTrigger" aria-label="Volume"></div>
+    <div id="tuningBar" class="tuning-indicator-bar" style="left:50%;"></div>
+    <div class="interactive-dial" id="dialWindow" aria-label="Tuning dial"></div>
+    <div class="interactive-tuning" id="tuningTrigger" aria-label="Next station"></div>
+    <div class="screen-display" id="stationDisplay" role="status" aria-live="polite">TAP DIAL TO POWER ON</div>
+    <div class="visualizer"><canvas id="visualizerCanvas"></canvas></div>
+</div>
 
-    <audio id="mainAudio" preload="auto" playsinline webkit-playsinline></audio>
+<audio id="mainAudio" preload="none" playsinline webkit-playsinline></audio>
 
-    <script>
-        const STATION_MANIFEST = {
+<script>
+const STATION_MANIFEST = {
             88.0: { name: "Omega", file: "audio/estrange.mp3" },                    
             88.3: { name: "ICI Première / Montréal", file: "https://rcavliveaudio.akamaized.net/hls/live/2006635/P-2QMTL0_MTL/master.m3u8", isLive: true },
             89.5: { name: "CIUT 89.5 FM / Toronto", file: "https://ice23.securenetsystems.net/CIUT", isLive: true },
@@ -95,141 +192,258 @@
             108.0: { name: "ICI Première / Ottawa", file: "https://rcavliveaudio.akamaized.net/hls/live/2006986/M-7OOTT0_OTT/master.m3u8", isLive: true }
         };
 
-        class SimpleRadio {
-            constructor(manifest, el) {
-                this.stations = manifest;
-                this.keys = Object.keys(manifest).map(Number);
-                this.el = el;
-                this.activeFreq = null;
-                this.isPowered = false;
-                this.hls = null;
-                this.volume = 0.8;
+class SimpleRadio {
+    constructor(manifest, el) {
+        this.stations = manifest;
+        this.keys = Object.keys(manifest).map(Number).sort((a,b)=>a-b);
+        this.el = el;
+        this.activeFreq = null;
+        this.isPowered = false;
+        this.hls = null;
+        this.volume = 0.8;
+        this.dragging = false;
+        this.raf = 0;
+        this.resizeObserver = null;
 
-                this.initCanvas();
-                this.bind();
-                this.loop();
-            }
+        this.initCanvas();
+        this.bind();
+        this.loop();
+    }
 
-            initCanvas() {
-                const resize = () => {
-                    const r = this.el.canvas.getBoundingClientRect();
-                    this.el.canvas.width = r.width * window.devicePixelRatio;
-                    this.el.canvas.height = r.height * window.devicePixelRatio;
-                    this.el.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-                };
-                window.addEventListener('resize', resize);
-                resize();
-            }
+    initCanvas() {
+        const resize = () => {
+            const canvas = this.el.canvas;
+            const rect = canvas.getBoundingClientRect();
+            const dpr = Math.min(window.devicePixelRatio || 1, 3);
 
-            bind() {
-                const handleInput = (clientX) => {
-                    if (!this.isPowered) {
-                        this.isPowered = true;
-                        this.tune(this.keys[0], true);
-                        return;
-                    }
-                    const r = this.el.dial.getBoundingClientRect();
-                    const ratio = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
-                    const freq = 88.0 + (ratio * 20.0);
-                    this.tune(freq, false);
-                };
+            canvas.width = Math.max(1, Math.round(rect.width * dpr));
+            canvas.height = Math.max(1, Math.round(rect.height * dpr));
 
-                this.el.dial.addEventListener('pointerdown', (e) => handleInput(e.clientX));
-                this.el.dial.addEventListener('pointermove', (e) => { if (e.buttons > 0) handleInput(e.clientX); });
+            // Reset the transform every resize; repeated ctx.scale() was
+            // accumulating transforms in the original version.
+            this.el.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        };
 
-                this.el.volume.addEventListener('click', () => {
-                    if (!this.isPowered) return;
-                    this.volume = this.volume >= 1.0 ? 0.2 : Number((this.volume + 0.2).toFixed(1));
-                    this.el.audio.volume = this.volume;
-                    this.el.display.textContent = `VOLUME: ${Math.round(this.volume * 100)}%`;
-                });
+        window.addEventListener('resize', resize, {passive:true});
+        window.addEventListener('orientationchange', () => setTimeout(resize, 100), {passive:true});
 
-                this.el.tuningTrigger.addEventListener('click', () => {
-                    if (!this.isPowered) {
-                        this.isPowered = true;
-                        this.tune(this.keys[0], true);
-                        return;
-                    }
-                    const idx = (this.keys.indexOf(this.activeFreq) + 1) % this.keys.length;
-                    this.tune(this.keys[idx], true);
-                });
-            }
-
-            tune(targetFreq, force) {
-                const closest = this.keys.reduce((p, c) => Math.abs(c - targetFreq) < Math.abs(p - targetFreq) ? c : p);
-                const pct = 18.0 + ((targetFreq - 88.0) / 20.0) * 64.0;
-                this.el.bar.style.left = `${Math.max(18, Math.min(82, pct))}%`;
-
-                const station = this.stations[closest];
-                this.el.display.textContent = `${station.name} (${closest.toFixed(1)} MHz)`;
-
-                if (force || this.activeFreq !== closest) {
-                    this.activeFreq = closest;
-                    this.load(station.file, station.isLive);
-                }
-            }
-
-            load(url, isLive) {
-                if (this.hls) { this.hls.destroy(); this.hls = null; }
-                const a = this.el.audio;
-                a.pause();
-                a.src = '';
-                a.loop = !isLive;
-                a.volume = this.volume;
-
-                if (isLive && url.endsWith('.m3u8')) {
-                    if (a.canPlayType('application/vnd.apple.mpegurl')) {
-                        a.src = url;
-                        a.play().catch(() => {});
-                    } else if (Hls.isSupported()) {
-                        this.hls = new Hls();
-                        this.hls.loadSource(url);
-                        this.hls.attachMedia(a);
-                        this.hls.on(Hls.Events.MANIFEST_PARSED, () => a.play().catch(() => {}));
-                    }
-                } else {
-                    a.src = url;
-                    a.play().catch(() => {
-                        this.el.display.textContent = `TAP SCREEN TO PLAY`;
-                    });
-                }
-            }
-
-            loop() {
-                requestAnimationFrame(() => this.loop());
-                const { canvas, ctx, audio } = this.el;
-                const w = canvas.getBoundingClientRect().width;
-                const h = canvas.getBoundingClientRect().height;
-                ctx.clearRect(0, 0, w, h);
-
-                const active = this.isPowered && !audio.paused;
-                ctx.lineWidth = 1.5;
-                ctx.strokeStyle = active ? 'rgba(255, 157, 0, 0.8)' : 'rgba(74, 44, 0, 0.3)';
-                ctx.beginPath();
-
-                const time = performance.now() * 0.005;
-                for (let i = 0; i < 80; i++) {
-                    const x = (i / 80) * w;
-                    let y = h / 2;
-                    if (active) y += Math.sin(i * 0.15 + time * 4) * 10;
-                    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-                }
-                ctx.stroke();
-            }
+        if ('ResizeObserver' in window) {
+            this.resizeObserver = new ResizeObserver(resize);
+            this.resizeObserver.observe(this.el.canvas);
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            new SimpleRadio(STATION_MANIFEST, {
-                dial: document.getElementById('dialWindow'),
-                bar: document.getElementById('tuningBar'),
-                volume: document.getElementById('volumeTrigger'),
-                tuningTrigger: document.getElementById('tuningTrigger'),
-                display: document.getElementById('stationDisplay'),
-                audio: document.getElementById('mainAudio'),
-                canvas: document.getElementById('visualizerCanvas'),
-                ctx: document.getElementById('visualizerCanvas').getContext('2d')
-            });
+        resize();
+    }
+
+    bind() {
+        const startAudio = () => {
+            if (!this.isPowered) {
+                this.isPowered = true;
+                this.tune(this.keys[0], true);
+            }
+        };
+
+        const tuneFromClientX = (clientX) => {
+            const r = this.el.dial.getBoundingClientRect();
+            const ratio = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+            const freq = 88.0 + ratio * 20.0;
+            this.tune(freq, false);
+        };
+
+        // Pointer Events cover modern Chrome/Edge/Safari/Firefox on mobile.
+        const onPointerDown = (e) => {
+            e.preventDefault();
+            this.dragging = true;
+            try { this.el.dial.setPointerCapture(e.pointerId); } catch (_) {}
+            if (!this.isPowered) startAudio();
+            else tuneFromClientX(e.clientX);
+        };
+
+        const onPointerMove = (e) => {
+            if (!this.dragging) return;
+            e.preventDefault();
+            tuneFromClientX(e.clientX);
+        };
+
+        const onPointerUp = (e) => {
+            this.dragging = false;
+            try { this.el.dial.releasePointerCapture(e.pointerId); } catch (_) {}
+        };
+
+        this.el.dial.addEventListener('pointerdown', onPointerDown, {passive:false});
+        this.el.dial.addEventListener('pointermove', onPointerMove, {passive:false});
+        this.el.dial.addEventListener('pointerup', onPointerUp, {passive:true});
+        this.el.dial.addEventListener('pointercancel', onPointerUp, {passive:true});
+
+        // Keyboard support for desktop and accessibility.
+        this.el.dial.tabIndex = 0;
+        this.el.dial.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                startAudio();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                this.tune((this.activeFreq ?? this.keys[0]) - .1, false);
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                this.tune((this.activeFreq ?? this.keys[0]) + .1, false);
+            }
         });
-    </script>
+
+        this.el.volume.addEventListener('click', () => {
+            if (!this.isPowered) return;
+            this.volume = this.volume >= 1 ? .2 : Number((this.volume + .2).toFixed(1));
+            this.el.audio.volume = this.volume;
+            this.el.display.textContent = `VOLUME: ${Math.round(this.volume * 100)}%`;
+        }, {passive:true});
+
+        this.el.tuningTrigger.addEventListener('click', () => {
+            if (!this.isPowered) {
+                startAudio();
+                return;
+            }
+            const idx = Math.max(0, this.keys.indexOf(this.activeFreq));
+            this.tune(this.keys[(idx + 1) % this.keys.length], true);
+        }, {passive:true});
+
+        // Mobile browsers require media playback to be initiated by a user
+        // gesture. A screen tap is therefore also a valid play gesture.
+        this.el.display.addEventListener('click', () => {
+            if (!this.isPowered) startAudio();
+            else if (this.el.audio.paused) this.playAudio();
+        }, {passive:true});
+
+        this.el.audio.addEventListener('error', () => {
+            this.el.display.textContent = 'STREAM ERROR / TRY ANOTHER STATION';
+        });
+
+        this.el.audio.addEventListener('ended', () => {
+            if (!this.stations[this.activeFreq]?.isLive) {
+                this.el.display.textContent = `${this.stations[this.activeFreq].name}`;
+            }
+        });
+    }
+
+    tune(targetFreq, force) {
+        if (!this.keys.length) return;
+
+        const closest = this.keys.reduce(
+            (p,c) => Math.abs(c-targetFreq) < Math.abs(p-targetFreq) ? c : p
+        );
+
+        const pct = 18 + ((targetFreq - 88) / 20) * 64;
+        this.el.bar.style.left = `${Math.max(18, Math.min(82, pct))}%`;
+
+        const station = this.stations[closest];
+        this.el.display.textContent = `${station.name} (${closest.toFixed(1)} MHz)`;
+
+        if (force || this.activeFreq !== closest) {
+            this.activeFreq = closest;
+            this.load(station.file, !!station.isLive);
+        }
+    }
+
+    async playAudio() {
+        try {
+            await this.el.audio.play();
+        } catch (_) {
+            this.el.display.textContent = 'TAP SCREEN TO PLAY';
+        }
+    }
+
+    load(url, isLive) {
+        if (this.hls) {
+            this.hls.destroy();
+            this.hls = null;
+        }
+
+        const a = this.el.audio;
+        a.pause();
+        a.removeAttribute('src');
+        a.load();
+        a.loop = !isLive;
+        a.volume = this.volume;
+
+        const isHls = /\.m3u8(?:$|[?#])/i.test(url);
+
+        if (isLive && isHls) {
+            // Safari/iOS/iPadOS generally has native HLS.
+            if (a.canPlayType('application/vnd.apple.mpegurl')) {
+                a.src = url;
+                this.playAudio();
+            } else if (window.Hls && Hls.isSupported()) {
+                this.hls = new Hls({
+                    enableWorker:true,
+                    lowLatencyMode:false
+                });
+
+                this.hls.loadSource(url);
+                this.hls.attachMedia(a);
+
+                this.hls.on(Hls.Events.MANIFEST_PARSED, () => this.playAudio());
+                this.hls.on(Hls.Events.ERROR, (_, data) => {
+                    if (data?.fatal) {
+                        this.el.display.textContent = 'HLS STREAM ERROR';
+                    }
+                });
+            } else {
+                this.el.display.textContent = 'HLS NOT SUPPORTED';
+            }
+        } else {
+            a.src = url;
+            this.playAudio();
+        }
+    }
+
+    loop() {
+        this.raf = requestAnimationFrame(() => this.loop());
+
+        const canvas = this.el.canvas;
+        const ctx = this.el.ctx;
+        const w = canvas.clientWidth;
+        const h = canvas.clientHeight;
+
+        if (!w || !h) return;
+
+        ctx.clearRect(0, 0, w, h);
+
+        const active = this.isPowered && !this.el.audio.paused;
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = active
+            ? 'rgba(255,157,0,.8)'
+            : 'rgba(74,44,0,.3)';
+
+        ctx.beginPath();
+
+        const time = performance.now() * .005;
+        for (let i=0; i<80; i++) {
+            const x = (i / 79) * w;
+            let y = h / 2;
+
+            if (active) {
+                y += Math.sin(i * .15 + time * 4) * Math.min(10, h * .25);
+            }
+
+            if (i === 0) ctx.moveTo(x,y);
+            else ctx.lineTo(x,y);
+        }
+
+        ctx.stroke();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    new SimpleRadio(STATION_MANIFEST, {
+        dial:document.getElementById('dialWindow'),
+        bar:document.getElementById('tuningBar'),
+        volume:document.getElementById('volumeTrigger'),
+        tuningTrigger:document.getElementById('tuningTrigger'),
+        display:document.getElementById('stationDisplay'),
+        audio:document.getElementById('mainAudio'),
+        canvas:document.getElementById('visualizerCanvas'),
+        ctx:document.getElementById('visualizerCanvas').getContext('2d')
+    });
+});
+</script>
 </body>
 </html>
