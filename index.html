@@ -41,39 +41,6 @@
         }
         .visualizer { position: absolute; top: 73.5%; left: 5%; right: 5%; height: 12.5%; pointer-events: none; z-index: 4; }
         #visualizerCanvas { display: block; width: 100%; height: 100%; }
-
-        /* Channel List Styles */
-        .channel-list {
-            position: relative;
-            width: 100%;
-            max-width: 900px;
-            margin-top: 20px;
-            background: rgba(18, 10, 4, 0.85);
-            border: 1px solid rgba(212, 175, 55, 0.3);
-            border-radius: 8px;
-            padding: 15px 20px;
-            z-index: 2;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: center;
-        }
-        .channel-item {
-            background: rgba(43, 20, 8, 0.6);
-            border: 1px solid rgba(255, 183, 51, 0.2);
-            color: var(--amber-glow);
-            padding: 6px 12px;
-            border-radius: 4px;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-shadow: 0 0 5px var(--amber-glow);
-        }
-        .channel-item:hover {
-            background: rgba(255, 183, 51, 0.2);
-            border-color: var(--amber-glow);
-            box-shadow: 0 0 8px rgba(255, 183, 51, 0.4);
-        }
     </style>
 </head>
 <body>
@@ -85,9 +52,6 @@
         <div class="screen-display" id="stationDisplay">RECEIVER STATUS: STANDBY... CLICK TO POWER ON</div>
         <div class="visualizer"><canvas id="visualizerCanvas"></canvas></div>
     </div>
-
-    <div class="channel-list" id="channelListContainer"></div>
-
     <audio id="mainAudio" preload="auto" crossorigin="anonymous" playsinline></audio>
     <script>
         const tuningBar = document.getElementById('tuningBar');
@@ -96,7 +60,6 @@
         const dialWindow = document.getElementById('dialWindow');
         const canvas = document.getElementById('visualizerCanvas');
         const ctx = canvas ? canvas.getContext('2d') : null;
-        const channelListContainer = document.getElementById('channelListContainer');
 
         let audioCtx = null, analyser = null, sourceNode = null, gainNode = null, hls = null;
         let isPowerOn = false, particles = [];
@@ -137,7 +100,8 @@
             requestAnimationFrame(draw);
             if (!canvas || !ctx) return;
             const rect = canvas.getBoundingClientRect();
-            const w = rect.width, h = rect.height;
+            const w = rect.width;
+            const h = rect.height;
             ctx.clearRect(0, 0, w, h);
 
             particles.forEach(p => {
@@ -169,27 +133,22 @@
         resize(); requestAnimationFrame(draw);
 
         const stations = {
-            88.0: { name: "Omega", file: "audio/estrange.mp3" },                    
-            88.3: { name: "ICI Première / Montréal", file: "https://rcavliveaudio.akamaized.net/hls/live/2006635/P-2QMTL0_MTL/master.m3u8", isLive: true },
+            88.0: { name: "ICI Première / Montréal", file: "https://rcavliveaudio.akamaized.net/hls/live/2006635/P-2QMTL0_MTL/master.m3u8", isLive: true },
             88.5: { name: "Iota", file: "audio/across bourbon street.mp3" },
             89.0: { name: "Iota Alpha", file: "audio/always.mp3" },
             89.5: { name: "Lambda Epsilon", file: "audio/arise.mp3" },
             90.0: { name: "Kappa Zeta", file: "audio/automatism.mp3" },
             90.5: { name: "Kappa Epsilon", file: "audio/bang.mp3" },
             91.0: { name: "Mu Delta", file: "audio/bliss.mp3" },
-            91.5: { name: "Sessions", file: "audio/Sessions.mp3" },
-            91.7: { name: "Lambda Delta", file: "audio/chase.mp3" },
+            91.5: { name: "Lambda Delta", file: "audio/chase.mp3" },
             92.0: { name: "Lambda Eta", file: "audio/cinderella shoe.mp3" },
             92.5: { name: "Iota Delta", file: "audio/cohesion.mp3" },
             93.0: { name: "Mu Beta", file: "audio/dancer.mp3" },
             93.5: { name: "Lambda Theta", file: "audio/dynamite.mp3" },
             94.0: { name: "Mu", file: "audio/equanimity.mp3" },
             94.5: { name: "Kappa Alpha", file: "audio/esprit itinerant.mp3" },
-            95.0: { name: "Lambda Alpha", file: "audio/Late.mp3" },
-            95.1: { name: "Duo Improbable - Stewart Copeland: Police Deranged for Orchestra & Sting - King of Pain", file: "audio/King of Pain.MP3" },
-            95.3: { name: "Duo Improbable - Eric Carmen & Céline Dion - All By Myself", file: "audio/All by Myself.MP3" },
-            95.5: { name: "Duo Improbable - Trent Reznor & Johnny Cash - Hurt", file: "audio/Hurt.MP3" },
-            95.7: { name: "Duo Improbable - Donna Summer & Clara Luciani - I Feel Love ~ C'est L'Amour", file: "audio/I Feel Love Donna Summer ~  C'est L'Amour Clara Luciani V2.wav" },
+            95.0: { name: "Lambda Alpha", file: "audio/estrange.mp3" },
+            95.5: { name: "Kappa", file: "audio/eveille.mp3" },
             96.0: { name: "Lambda Mu", file: "audio/father.mp3" },
             96.5: { name: "Lambda Stigma", file: "audio/grave.mp3" },
             97.0: { name: "Kappa Eta", file: "audio/inversion.mp3" },
@@ -213,4 +172,71 @@
             105.5: { name: "Kappa Iota", file: "audio/soleil.mp3" },
             106.0: { name: "Kappa Delta", file: "audio/spectrum.mp3" },
             106.5: { name: "Lambda Zeta", file: "audio/stubborness.mp3" },
-            107.0: { name: "Mu Theta", file: "
+            107.0: { name: "Mu Theta", file: "audio/tangerine.mp3" },
+            107.5: { name: "Kappa Beta", file: "audio/the daunting.mp3" },
+            108.0: { name: "ICI Première / Ottawa", file: "https://rcavliveaudio.akamaized.net/hls/live/2006986/M-7OOTT0_OTT/master.m3u8", isLive: true }
+        };
+
+        function playSource(url, isLive) {
+            if (!isPowerOn) return;
+            if (hls) { hls.destroy(); hls = null; }
+            audioEl.pause(); audioEl.src = ""; audioEl.loop = !isLive;
+
+            if (isLive && url.endsWith('.m3u8')) {
+                if (Hls.isSupported()) {
+                    hls = new Hls(); hls.loadSource(url); hls.attachMedia(audioEl);
+                    hls.on(Hls.Events.MANIFEST_PARSED, () => audioEl.play().catch(() => {}));
+                } else if (audioEl.canPlayType('application/vnd.apple.mpegurl')) {
+                    audioEl.src = url; audioEl.load(); audioEl.play().catch(() => {});
+                }
+            } else {
+                audioEl.src = url; audioEl.load(); audioEl.play().catch(() => {});
+            }
+        }
+
+        function tune(freq) {
+            if (!isPowerOn) return;
+            const percent = 18.0 + ((freq - 88.0) / (108.0 - 88.0)) * 64.0;
+            tuningBar.style.left = `${percent}%`;
+
+            const keys = Object.keys(stations).map(Number);
+            const closest = keys.reduce((p, c) => Math.abs(c - freq) < Math.abs(p - freq) ? c : p);
+
+            if (Math.abs(freq - closest) <= 0.25) {
+                const s = stations[closest];
+                stationDisplay.textContent = `[ ${s.isLive ? 'LIVE' : 'LOCKED'} ] > ${s.name} (${closest.toFixed(1)} MHz)`;
+                playSource(s.file, s.isLive);
+            } else {
+                if (hls) { hls.destroy(); hls = null; }
+                stationDisplay.textContent = `MUTED (DEAD AIR)... [ FREQ: ${freq.toFixed(1)} MHz ]`;
+                audioEl.pause(); audioEl.src = "";
+            }
+        }
+
+        dialWindow.addEventListener('click', (e) => {
+            if (!isPowerOn) {
+                isPowerOn = true; initAudio();
+                if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+                tune(88.0); return;
+            }
+            const rect = dialWindow.getBoundingClientRect();
+            const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            tune(Number((88.0 + (ratio * 20.0)).toFixed(1)));
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const wake = () => {
+                if (!isPowerOn) {
+                    isPowerOn = true; initAudio();
+                    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+                    tune(88.0);
+                }
+                window.removeEventListener('click', wake);
+                window.removeEventListener('touchstart', wake);
+            };
+            window.addEventListener('click', wake);
+            window.addEventListener('touchstart', wake);
+        });
+    </script>
+</body>
+</html>
