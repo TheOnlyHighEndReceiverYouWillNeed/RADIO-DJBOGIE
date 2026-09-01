@@ -2,599 +2,175 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Radio Console - Independent Broadcast</title>
-    
-    <!-- HLS.js Library for Universal Browser Support of .m3u8 Streams -->
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Radio Console</title>
     <style>
-        body {
-            background-color: #2b1d15;
-            background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('photo/background.png');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-attachment: fixed;
-            color: #e0d0c0;
-            font-family: 'Courier New', Courier, monospace;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
+        :root {
+            --bg-color: #121214;
+            --panel-color: #1a1a1e;
+            --accent-glow: #ffb703;
+            --text-color: #e0e0e0;
+            --scale-font-size: 0.75rem;
+        }
+
+        * {
+            box-sizing: border-box;
             margin: 0;
-            overflow-x: hidden;
-            user-select: none;
+            padding: 0;
         }
 
-        .console-cabinet {
-            background: linear-gradient(135deg, rgba(43, 29, 21, 0.95), rgba(20, 13, 10, 0.95));
-            border: 14px solid #080504;
-            padding: 35px 45px;
-            border-radius: 16px;
-            box-shadow: 0 25px 60px rgba(0,0,0,0.95), inset 0 2px 10px rgba(255,255,255,0.08);
-            width: 820px;
-            text-align: center;
-            backdrop-filter: blur(4px);
-        }
-
-        .brand-plate {
-            font-size: 13px;
-            letter-spacing: 5px;
-            color: #a68965;
-            margin-bottom: 18px;
-            text-transform: uppercase;
-            font-weight: bold;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-        }
-
-        .radio-faceplate {
-            background: #0d0d0d;
-            border: 4px solid #1f1f1f;
-            border-radius: 8px;
-            padding: 22px 28px;
-            position: relative;
-            box-shadow: inset 0 8px 20px rgba(0,0,0,0.95), 0 2px 5px rgba(0,0,0,0.5);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 20px;
-            margin-bottom: 22px;
-        }
-
-        .knob-assembly {
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: monospace, sans-serif;
+            height: 100dvh;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            width: 90px;
-        }
-
-        .knob {
-            width: 70px;
-            height: 70px;
-            border-radius: 50%;
-            background: radial-gradient(circle, #d0d0d0 25%, #777 65%, #222 100%);
-            border: 3px solid #0a0a0a;
-            box-shadow: 0 8px 18px rgba(0,0,0,0.9), inset 0 3px 5px rgba(255,255,255,0.7);
-            position: relative;
-            transform: rotate(-45deg);
-        }
-
-        .knob::after {
-            content: '';
-            position: absolute;
-            top: 5px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 4px;
-            height: 18px;
-            background: #111;
-            border-radius: 2px;
-        }
-
-        .knob-label {
-            font-size: 10px;
-            color: #999;
-            letter-spacing: 2px;
-            margin-top: 10px;
-            font-weight: bold;
-        }
-
-        .dial-window {
-            flex-grow: 1;
-            background: #050505;
-            border: 3px solid #1a1a1a;
-            border-radius: 4px;
-            padding: 14px 18px;
-            position: relative;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.95);
-            text-align: left;
+            justify-content: space-between;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
             overflow: hidden;
         }
 
-        /* Subtle glass glare reflection across the dial */
-        .dial-window::after {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 50%);
-            pointer-events: none;
+        .radio-console {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            background: var(--panel-color);
+            padding: 16px;
+            gap: 16px;
         }
 
-        .scale-row {
+        .console-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+            padding-bottom: 8px;
+        }
+
+        .console-title {
+            font-size: 0.9rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--accent-glow);
+        }
+
+        /* Oscilloscope Visualizer */
+        .visualizer-container {
+            width: 100%;
+            height: 120px;
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            font-size: 11px;
-            color: #bbb;
-            margin-bottom: 6px;
-            letter-spacing: 0.5px;
+            justify-content: center;
         }
 
-        .band-label {
-            color: #ff3b3b;
-            font-weight: bold;
-            width: 35px;
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* Frequency Scale & Tuner */
+        .tuner-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: #151518;
+            padding: 12px;
+            border-radius: 4px;
+            border: 1px solid #2a2a2e;
         }
 
         .scale-numbers {
             display: flex;
             justify-content: space-between;
-            flex-grow: 1;
-            padding: 0 5px;
-            overflow: hidden;
-        }
-
-        .scale-numbers span {
-            font-size: 9px;
-            white-space: nowrap;
-        }
-
-        .scale-unit {
-            color: #ff3b3b;
-            font-weight: bold;
-            font-size: 11px;
-            width: 35px;
-            text-align: right;
-        }
-
-        .tuning-track-container {
-            position: relative;
-            height: 16px;
-            background: #121212;
-            border-radius: 3px;
-            margin: 6px 35px 8px 35px;
-            border: 1px solid #282828;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);
-        }
-
-        .tuning-indicator-bar {
-            position: absolute;
-            top: 2px;
-            bottom: 2px;
-            width: 10px;
-            background: #f0f0f0;
-            border-radius: 2px;
-            box-shadow: 0 0 10px rgba(255,255,255,0.9);
-            transform: translateX(-50%);
-            transition: left 0.05s ease-out;
-        }
-
-        .sub-footer-text {
-            text-align: center;
-            font-size: 10px;
-            color: #777;
-            letter-spacing: 3px;
-            border-top: 1px solid #181818;
-            padding-top: 8px;
-            margin-top: 6px;
-        }
-
-        /* Vintage CRT Screen Display with Scanlines */
-        .screen-display {
-            background: #060a06;
-            border: 2px solid #141c14;
-            padding: 15px;
-            border-radius: 5px;
-            font-size: 14px;
-            color: #5af142;
-            min-height: 32px;
-            margin-bottom: 20px;
-            box-shadow: inset 0 3px 8px rgba(0,0,0,0.9);
-            letter-spacing: 1.2px;
-            text-shadow: 0 0 8px rgba(90, 241, 66, 0.5);
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* Scanline effect overlay */
-        .screen-display::before {
-            content: " ";
-            display: block;
-            position: absolute;
-            top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%);
-            background-size: 100% 4px;
-            z-index: 3;
-            pointer-events: none;
-        }
-
-        .controls-panel {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        input[type=range] {
-            width: 100%;
-            accent-color: #a68965;
-            cursor: pointer;
-            height: 8px;
-            background: #111;
-            border-radius: 4px;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.9);
-        }
-
-        .helper-text {
-            font-size: 10px;
+            font-size: var(--scale-font-size);
             color: #888;
+            padding: 0 4px;
+        }
+
+        /* Hide alternating frequency numbers on narrow screens to prevent overlap */
+        @media (max-width: 480px) {
+            .scale-numbers span:nth-child(even) {
+                display: none;
+            }
+        }
+
+        .frequency-display {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent-glow);
+            text-shadow: 0 0 8px rgba(255, 183, 3, 0.4);
+        }
+
+        /* Controls Deck */
+        .controls-deck {
+            display: flex;
+            gap: 12px;
+            margin-top: auto;
+        }
+
+        .console-btn {
+            flex: 1;
+            background: #25252a;
+            color: var(--text-color);
+            border: 1px solid #444;
+            padding: 14px;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 0.9rem;
             text-transform: uppercase;
-            letter-spacing: 3px;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
         }
 
-        .visualizer {
-            height: 220px;
-            margin: 0 0 20px 0;
-            padding: 8px;
-            background: #020205;
-            border: 2px solid #161322;
-            border-radius: 5px;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.95);
-            position: relative;
-            overflow: hidden;
-        }
-
-        #visualizerCanvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-            position: relative;
-            z-index: 2;
+        .console-btn:active {
+            background: var(--accent-glow);
+            color: #000;
+            border-color: var(--accent-glow);
         }
     </style>
 </head>
 <body>
 
-    <div class="console-cabinet">
-        <div class="brand-plate">DJBogie Radio Console High Fidelity Receiver</div>
-        
-        <div class="radio-faceplate">
-            <div class="knob-assembly">
-                <div class="knob"></div>
-                <div class="knob-label">VOLUME</div>
-            </div>
+    <div class="radio-console">
+        <header class="console-header">
+            <span class="console-title">Radio Console // Mk.IV</span>
+            <span class="status-indicator">● LIVE</span>
+        </header>
 
-            <div class="dial-window">
-                <div class="scale-row">
-                    <span class="band-label">FM</span>
-                    <div class="scale-numbers">
-                        <span>88</span><span>90</span><span>92</span><span>94</span><span>96</span><span>98</span><span>100</span><span>102</span><span>105</span><span>108</span>
-                    </div>
-                    <span class="scale-unit">MHz</span>
-                </div>
-
-                <div class="tuning-track-container">
-                    <div id="tuningBar" class="tuning-indicator-bar" style="left: 0%;"></div>
-                </div>
-
-                <div class="scale-row">
-                    <span class="band-label" style="color: #ffaa33;">AM</span>
-                    <div class="scale-numbers" style="color: #999;">
-                        <span>535</span><span>650</span><span>800</span><span>1000</span><span>1200</span><span>1400</span><span>1500</span><span>1605</span>
-                    </div>
-                    <span class="scale-unit" style="color: #ffaa33;">kHz</span>
-                </div>
-
-                <div class="sub-footer-text">FM/AM BAND RADIO CONSOLE</div>
-            </div>
-
-            <div class="knob-assembly">
-                <div class="knob" style="transform: rotate(45deg);"></div>
-                <div class="knob-label">TUNING</div>
-            </div>
-        </div>
-        
-        <div class="screen-display" id="stationDisplay">
-            RECEIVER STATUS: STANDBY...
+        <!-- Oscilloscope Visualizer Deck -->
+        <div class="visualizer-container">
+            <canvas id="oscilloscope"></canvas>
         </div>
 
-        <div class="visualizer">
-            <canvas id="visualizerCanvas"></canvas>
+        <!-- Tuner & Scale Section -->
+        <div class="tuner-section">
+            <div class="frequency-display">101.1 MHz</div>
+            <div class="scale-numbers">
+                <span>88</span>
+                <span>92</span>
+                <span>96</span>
+                <span>100</span>
+                <span>104</span>
+                <span>108</span>
+            </div>
         </div>
 
-        <div class="controls-panel">
-            <input type="range" id="tuner" min="87.0" max="108.0" step="0.1" value="87.0">
-            <div class="helper-text">Frequency Slide Tuner</div>
+        <!-- Primary Controls -->
+        <div class="controls-deck">
+            <button class="console-btn" id="power-btn">Power</button>
+            <button class="console-btn" id="scan-btn">Scan</button>
+            <button class="console-btn" id="mute-btn">Mute</button>
         </div>
     </div>
 
-    <!-- Audio Element with loop support, CORS, and mobile readiness -->
-    <audio id="mainAudio" preload="auto" crossorigin="anonymous" loop></audio>
-
-    <script>
-        const tuner = document.getElementById('tuner');
-        const tuningBar = document.getElementById('tuningBar');
-        const stationDisplay = document.getElementById('stationDisplay');
-        const audioEl = document.getElementById('mainAudio');
-
-        const canvas = document.getElementById('visualizerCanvas');
-        const canvasCtx = canvas ? canvas.getContext('2d') : null;
-
-        let audioContext = null;
-        let analyser = null;
-        let sourceNode = null;
-        let visualizerStarted = false;
-        let hlsInstance = null;
-
-        let particles = [];
-        const numParticles = 40;
-
-        function initParticles(width, height) {
-            particles = [];
-            for (let i = 0; i < numParticles; i++) {
-                particles.push({
-                    x: Math.random() * width,
-                    y: Math.random() * height,
-                    size: Math.random() * 2 + 0.5,
-                    speed: Math.random() * 0.8 + 0.2,
-                    opacity: Math.random() * 0.3 + 0.05
-                });
-            }
-        }
-
-        function resizeVisualizer() {
-            if (!canvas || !canvasCtx) return;
-            const rect = canvas.getBoundingClientRect();
-            const dpr = window.devicePixelRatio || 1;
-            canvas.width = Math.max(1, Math.floor(rect.width * dpr));
-            canvas.height = Math.max(1, Math.floor(rect.height * dpr));
-            canvasCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            initParticles(rect.width, rect.height);
-        }
-
-        function setupVisualizer() {
-            if (visualizerStarted || !audioEl) return;
-            try {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                analyser = audioContext.createAnalyser();
-                analyser.fftSize = 2048; 
-                analyser.smoothingTimeConstant = 0.3;
-
-                sourceNode = audioContext.createMediaElementSource(audioEl);
-                sourceNode.connect(analyser);
-                analyser.connect(audioContext.destination);
-                visualizerStarted = true;
-                resizeVisualizer();
-                drawVisualizer();
-            } catch (err) {
-                console.log('Visualizer setup note:', err);
-            }
-        }
-
-        function drawVisualizer() {
-            requestAnimationFrame(drawVisualizer);
-            if (!canvas || !canvasCtx) return;
-
-            const rect = canvas.getBoundingClientRect();
-            const width = rect.width;
-            const height = rect.height;
-
-            canvasCtx.fillStyle = '#020205';
-            canvasCtx.fillRect(0, 0, width, height);
-
-            canvasCtx.save();
-            particles.forEach(p => {
-                p.x -= p.speed;
-                if (p.x < 0) p.x = width;
-                canvasCtx.fillStyle = `rgba(100, 150, 255, ${p.opacity})`;
-                canvasCtx.fillRect(p.x, p.y, p.size * 2, p.size);
-            });
-            canvasCtx.restore();
-
-            const bufferLength = analyser ? analyser.frequencyBinCount : 1024;
-            const dataArray = new Uint8Array(bufferLength);
-
-            if (analyser && audioEl && !audioEl.paused) {
-                analyser.getByteTimeDomainData(dataArray);
-            } else {
-                dataArray.fill(128);
-            }
-
-            canvasCtx.lineWidth = 1.5;
-            canvasCtx.strokeStyle = '#76ff63';
-            canvasCtx.beginPath();
-
-            const sliceWidth = width / bufferLength;
-            let x = 0;
-
-            for (let i = 0; i < bufferLength; i++) {
-                const v = dataArray[i] / 128.0; 
-                const y = (v - 1.0) * (height * 1.5) + (height / 2);
-                if (i === 0) {
-                    canvasCtx.moveTo(x, y);
-                } else {
-                    canvasCtx.lineTo(x, y);
-                }
-                x += sliceWidth;
-            }
-            canvasCtx.stroke();
-        }
-
-        window.addEventListener('resize', resizeVisualizer);
-        resizeVisualizer();
-
-        // Mobile AudioContext unlocking & Media Session integration
-        function resumeAudioContext() {
-            if (audioContext && audioContext.state === 'suspended') {
-                audioContext.resume();
-            }
-        }
-        window.addEventListener('touchstart', resumeAudioContext, { passive: true });
-        window.addEventListener('click', resumeAudioContext);
-
-        function updateMediaSession(title) {
-            if ('mediaSession' in navigator) {
-                navigator.mediaSession.metadata = new MediaMetadata({
-                    title: title,
-                    artist: "DJBogie Radio Console",
-                    album: "Independent Broadcast",
-                    artwork: [{ src: 'photo/background.png', sizes: '512x512', type: 'image/png' }]
-                });
-                navigator.mediaSession.setActionHandler('play', () => { audioEl.play(); });
-                navigator.mediaSession.setActionHandler('pause', () => { audioEl.pause(); });
-            }
-        }
-
-        const minFreq = 87.0;
-        const maxFreq = 108.0;
-        const defaultFrequency = 87.0;
-
-        const stations = {
-            87.0: { title: "ICI Radio-Canada Montréal (Live)", file: "https://rcavliveaudio.akamaized.net/hls/live/2006635/P-2QMTL0_MTL/master.m3u8", isLive: true },
-            87.5: { title: "Beta", file: "audio/automatism.mp3" },
-            88.0: { title: "Gamma", file: "audio/next flight home.mp3" },
-            88.5: { title: "Delta", file: "audio/father.mp3" },
-            89.0: { title: "Epsilon", file: "audio/cohesion.mp3" },
-            89.5: { title: "Stigma", file: "audio/sacrifice.mp3" },
-            90.0: { title: "Zeta", file: "audio/always.mp3" },
-            90.5: { title: "Eta", file: "audio/monster.mp3" },
-            91.0: { title: "Theta", file: "audio/Ripple2026.mp3" },
-            91.5: { title: "Iota", file: "audio/slow think.mp3" },
-            92.0: { title: "Iota Alpha", file: "audio/inversion.mp3" },
-            92.5: { title: "Iota Beta", file: "audio/ubiquity.mp3" },
-            93.0: { title: "Iota Gamma", file: "audio/understanding.mp3" },
-            93.5: { title: "Iota Delta", file: "audio/rEADYsETgO 2026.mp3" },
-            94.0: { title: "Iota Epsilon", file: "audio/arise.mp3" },
-            94.5: { title: "Iota Stigma", file: "audio/melancoly in flat.mp3" },
-            95.0: { title: "Iota Zeta", file: "audio/push.mp3" },
-            95.5: { title: "Iota Eta", file: "audio/recalcitrant.mp3" },
-            96.0: { title: "Iota Theta", file: "audio/across bourbon street.mp3" },
-            96.5: { title: "Kappa", file: "audio/eveille.mp3" },
-            97.0: { title: "Kappa Alpha", file: "audio/esprit itinerant.mp3" },
-            97.5: { title: "Kappa Beta", file: "audio/the daunting.mp3" },
-            98.0: { title: "Kappa Gamma", file: "audio/mass effect.mp3" },
-            98.5: { title: "Kappa Delta", file: "audio/spectrum.mp3" },
-            99.0: { title: "Kappa Epsilon", file: "audio/bang.mp3" },
-            99.5: { title: "Kappa Stigma", file: "audio/tangerine.mp3" },
-            100.0: { title: "Kappa Zeta", file: "audio/quantum touch.mp3" },
-            100.5: { title: "Kappa Eta", file: "audio/bliss.mp3" },
-            101.0: { title: "Kappa Theta", file: "audio/resounding.mp3" },
-            101.5: { title: "Lambda", file: "audio/oticons.mp3" },
-            102.0: { title: "Lambda Alpha", file: "audio/estrange.mp3" },
-            102.5: { title: "Lambda Beta", file: "audio/twin sparks.mp3" },
-            103.0: { title: "Lambda Gamma", file: "audio/pacis.mp3" },
-            103.5: { title: "Lambda Delta", file: "audio/chase.mp3" },
-            104.0: { title: "Lambda Epsilon", file: "audio/CrockV4.mp3" },
-            104.5: { title: "Lambda Stigma", file: "audio/grave.mp3" },
-            105.0: { title: "Lambda Zeta", file: "audio/stubborness.mp3" },
-            105.5: { title: "Lambda Eta", file: "audio/cinderella shoe.mp3" },
-            106.0: { title: "Lambda Theta", file: "audio/dynamite.mp3" },
-            106.5: { title: "Mu", file: "audio/equanimity.mp3" },
-            107.0: { title: "Mu Alpha", file: "audio/lucioles.mp3" },
-            107.5: { title: "Mu Beta", file: "audio/dancer.mp3" },
-            108.0: { title: "Mu Gamma", file: "audio/there.mp3" }
-        };
-
-        function loadAudioSource(url, isHls, title) {
-            if (hlsInstance) {
-                hlsInstance.destroy();
-                hlsInstance = null;
-            }
-
-            audioEl.pause();
-            audioEl.src = "";
-            audioEl.loop = !isHls;
-            updateMediaSession(title);
-
-            if (isHls && url.endsWith('.m3u8')) {
-                if (Hls.isSupported()) {
-                    hlsInstance = new Hls();
-                    hlsInstance.loadSource(url);
-                    hlsInstance.attachMedia(audioEl);
-                    hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
-                        audioEl.play().catch(err => console.log("HLS autoplay locked:", err));
-                    });
-                } else if (audioEl.canPlayType('application/vnd.apple.mpegurl')) {
-                    audioEl.src = url;
-                    audioEl.load();
-                    audioEl.play().catch(err => console.log("Native HLS autoplay locked:", err));
-                }
-            } else {
-                audioEl.src = url;
-                audioEl.load();
-                audioEl.play().catch(err => console.log("Standard audio autoplay locked:", err));
-            }
-        }
-
-        function tuneToFrequency(rawVal) {
-            if (!tuningBar || !stationDisplay || !audioEl) return;
-            const percent = ((rawVal - minFreq) / (maxFreq - minFreq)) * 100;
-            tuningBar.style.left = `${percent}%`;
-
-            const keys = Object.keys(stations).map(Number);
-            let closestKey = keys.reduce((prev, curr) => Math.abs(curr - rawVal) < Math.abs(prev - rawVal) ? curr : prev);
-            let minDiff = Math.abs(rawVal - closestKey);
-
-            if (minDiff <= 0.25) {
-                let station = stations[closestKey];
-                
-                if (station.isLive) {
-                    stationDisplay.innerHTML = `[ LIVE LOCKED ] > CHANNEL: ${station.title} (${closestKey.toFixed(1)} MHz)`;
-                } else {
-                    stationDisplay.innerHTML = `[ LOCKED ] > TRANSMISSION: ${station.title} (${closestKey.toFixed(1)} MHz)`;
-                }
-
-                loadAudioSource(station.file, station.isLive, station.title);
-            } else {
-                if (hlsInstance) {
-                    hlsInstance.destroy();
-                    hlsInstance = null;
-                }
-                stationDisplay.innerHTML = `STATIC... [ FREQ: ${rawVal.toFixed(1)} MHz ]`;
-                audioEl.loop = false;
-                audioEl.pause();
-                audioEl.src = "";
-            }
-        }
-
-        if (tuner) {
-            tuner.addEventListener('input', (e) => {
-                tuneToFrequency(parseFloat(e.target.value));
-            });
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            if (!tuner || !audioEl) return;
-            tuner.value = defaultFrequency;
-            
-            let station = stations[defaultFrequency];
-            if (tuningBar) tuningBar.style.left = '0%';
-            if (stationDisplay) stationDisplay.innerHTML = `[ LIVE LOCKED ] > CHANNEL: ${station.title} (${defaultFrequency.toFixed(1)} MHz)`;
-            
-            loadAudioSource(station.file, station.isLive, station.title);
-            
-            audioEl.play().catch(err => {
-                console.log("Initial autoplay lock active. Will play on first user click.");
-                const unlockAudio = () => {
-                    audioEl.play();
-                    window.removeEventListener('click', unlockAudio);
-                    window.removeEventListener('keydown', unlockAudio);
-                };
-                window.addEventListener('click', unlockAudio);
-                window.addEventListener('keydown', unlockAudio);
-            });
-        });
-    </script>
 </body>
 </html>
