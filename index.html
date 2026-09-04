@@ -4,6 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Radio Console</title>
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'GA_MEASUREMENT_ID');
+    </script>
+
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         :root { --amber-glow: #ffb733; }
@@ -259,6 +270,14 @@
                 const s = stations[closest];
                 stationDisplay.textContent = `[ ${s.isLive ? 'LIVE' : 'LOCKED'} ] > ${s.name} (${closest.toFixed(1)} MHz)`;
                 playSource(s.file, s.isLive);
+                
+                // Optional: Track station tunes as custom GA4 events
+                if (typeof gtag === 'function') {
+                    gtag('event', 'tune_station', {
+                        station_name: s.name,
+                        frequency: closest.toFixed(1)
+                    });
+                }
             } else {
                 if (hls) { hls.destroy(); hls = null; }
                 stationDisplay.textContent = `MUTED (DEAD AIR)... [ FREQ: ${freq.toFixed(1)} MHz ]`;
