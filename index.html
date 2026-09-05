@@ -279,11 +279,10 @@
             initAudio();
             isPowerOn = true;
             
-            // Prime and unlock audio element on mobile
-            audioEl.src = stations[88.0].file;
-            audioEl.load();
+            // Synchronously assign source and fire play immediately within the touch event stack
+            const s = stations[88.0];
+            audioEl.src = s.file;
             audioEl.play().then(() => {
-                audioEl.pause();
                 tune(currentFreq);
             }).catch(err => {
                 console.warn("Power prime action intercepted:", err);
@@ -291,7 +290,6 @@
             });
         }
 
-        // Explicit power button interaction on the screen display
         stationDisplay.addEventListener('click', () => {
             if (!isPowerOn) {
                 powerOnReceiver();
