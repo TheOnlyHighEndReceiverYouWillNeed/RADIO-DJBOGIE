@@ -53,46 +53,56 @@
         .visualizer { position: absolute; top: 73.5%; left: 5%; right: 5%; height: 12.5%; pointer-events: none; z-index: 4; }
         #visualizerCanvas { display: block; width: 100%; height: 100%; }
 
-        /* Immersive Power Overlay */
-        .power-overlay {
-            position: absolute; inset: 0; background: rgba(11, 6, 4, 0.92);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 100; transition: opacity 0.5s ease; cursor: pointer; text-align: center; padding: 20px;
+        /* Showcase Audio Banner */
+        .showcase-banner {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 600px; background: rgba(27, 13, 5, 0.95);
+            border: 1px solid rgba(255, 183, 51, 0.4); border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8), 0 0 15px rgba(255, 183, 51, 0.15);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 20px; z-index: 100; backdrop-filter: blur(5px);
+            transition: opacity 0.4s ease, transform 0.4s ease;
         }
-        .power-overlay.hidden { opacity: 0; pointer-events: none; }
-        .power-btn {
-            background: linear-gradient(135deg, #3d1c0a, #1a0b04);
-            border: 2px solid var(--amber-glow); color: var(--amber-glow);
-            font-size: 14px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase;
-            padding: 16px 32px; border-radius: 8px; box-shadow: 0 0 20px rgba(255, 183, 51, 0.3);
-            cursor: pointer; transition: all 0.2s ease;
+        .showcase-banner.hidden { opacity: 0; transform: translate(-50%, 20px); pointer-events: none; }
+        .showcase-text { display: flex; flex-direction: column; }
+        .showcase-title { font-size: 12px; font-weight: bold; color: var(--amber-glow); letter-spacing: 1px; text-transform: uppercase; }
+        .showcase-subtitle { font-size: 10px; color: #a68a6d; margin-top: 2px; }
+        .showcase-btn {
+            background: linear-gradient(135deg, #ffb733, #d9822b); color: #1a0b04;
+            border: none; font-size: 11px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase;
+            padding: 8px 16px; border-radius: 4px; cursor: pointer; box-shadow: 0 0 10px rgba(255, 183, 51, 0.4);
+            transition: transform 0.2s ease, background 0.2s ease; white-space: nowrap; margin-left: 15px;
         }
-        .power-btn:hover { background: #52270e; box-shadow: 0 0 30px rgba(255, 183, 51, 0.6); transform: scale(1.05); }
-        .power-subtext { font-size: 11px; color: #a68a6d; margin-top: 15px; letter-spacing: 1px; text-transform: uppercase; }
+        .showcase-btn:hover { background: #ffe885; transform: scale(1.03); }
     </style>
 </head>
 <body>
     <div class="console-container">
-        <!-- Power Splash Overlay -->
-        <div class="power-overlay" id="powerOverlay">
-            <button class="power-btn">Turn On Receiver</button>
-            <div class="power-subtext">Tap to initialize audio & open studio stream</div>
-        </div>
-
         <div class="interactive-volume" id="volumeTrigger"></div>
         <div id="tuningBar" class="tuning-indicator-bar" style="left: 50%;"></div>
         <div class="interactive-dial" id="dialWindow"></div>
         <div class="interactive-tuning" id="tuningTrigger"></div>
-        <div class="screen-display" id="stationDisplay">RECEIVER ACTIVE — 88.0 MHz</div>
+        <div class="screen-display" id="stationDisplay">RECEIVER STANDBY — CLICK BANNER TO PLAY SHOWCASE</div>
         <div class="visualizer"><canvas id="visualizerCanvas"></canvas></div>
     </div>
+    
+    <!-- Floating Showcase Slogan Banner -->
+    <div class="showcase-banner" id="showcaseBanner">
+        <div class="showcase-text">
+            <span class="showcase-title">NEW SONG SHOWCASE</span>
+            <span class="showcase-subtitle">Tune into 88.0 MHz to preview latest tracks</span>
+        </div>
+        <button class="showcase-btn" id="showcaseTrigger">Play Track</button>
+    </div>
+
     <audio id="mainAudio" preload="auto" crossorigin="anonymous" playsinline></audio>
     <script>
         const tuningBar = document.getElementById('tuningBar');
         const stationDisplay = document.getElementById('stationDisplay');
         const audioEl = document.getElementById('mainAudio');
         const dialWindow = document.getElementById('dialWindow');
-        const powerOverlay = document.getElementById('powerOverlay');
+        const showcaseBanner = document.getElementById('showcaseBanner');
+        const showcaseTrigger = document.getElementById('showcaseTrigger');
         const canvas = document.getElementById('visualizerCanvas');
         const ctx = canvas ? canvas.getContext('2d') : null;
 
@@ -287,33 +297,28 @@
                     playSource(s.file, s.isLive);
                 }
             } else {
-                if (hls) { hls.destroy(); hls = null; }
-                stationDisplay.textContent = `MUTED (DEAD AIR)... [ FREQ: ${freq.toFixed(1)} MHz ]`;
-                if (!audioEl.paused) {
-                    audioEl.pause();
-                    audioEl.src = "";
-                }
+                stationDisplay.textContent = `TUNING... [ FREQ: ${freq.toFixed(1)} MHz ]`;
             }
         }
 
-        function powerOnReceiver() {
+        function activateShowcase() {
             if (isPowerOn) return;
             initAudio();
             isPowerOn = true;
             
-            powerOverlay.classList.add('hidden');
+            showcaseBanner.classList.add('hidden');
             
             const s = stations[88.0];
             audioEl.src = s.file;
             audioEl.play().then(() => {
                 tune(currentFreq);
             }).catch(err => {
-                console.warn("Power prime action intercepted:", err);
+                console.warn("Showcase prime action intercepted:", err);
                 tune(currentFreq);
             });
         }
 
-        powerOverlay.addEventListener('click', powerOnReceiver);
+        showcaseTrigger.addEventListener('click', activateShowcase);
 
         let isDragging = false;
 
@@ -324,7 +329,9 @@
         }
 
         dialWindow.addEventListener('pointerdown', (e) => {
-            if (!isPowerOn) return;
+            if (!isPowerOn) {
+                activateShowcase();
+            }
             isDragging = true;
             dialWindow.setPointerCapture(e.pointerId);
             updateFromPointer(e);
