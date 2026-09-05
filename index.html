@@ -6,13 +6,13 @@
     <title>Radio Console</title>
     
     <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-7GLPZ5M24E"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
 
-      gtag('config', 'GA_MEASUREMENT_ID');
+      gtag('config', 'G-7GLPZ5M24E');
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
@@ -166,7 +166,7 @@
         resize(); requestAnimationFrame(draw);
 
         const stations = {
-            88.0: { name: "Omega", file: "audio/estrange.mp3" },               
+            88.0: { name: "Omega", file: "audio/estrange.mp3" },            
             88.3: { name: "ICI Première / Montréal", file: "https://rcavliveaudio.akamaized.net/hls/live/2006635/P-2QMTL0_MTL/master.m3u8", isLive: true },
             88.5: { name: "Duo Improbable - Trent Reznor & Johnny Cash - Hurt", file: "audio/trent-reznor-johnny-cash-hurt.mp3" },
             88.8: { name: "Echo Delta", file: "audio/arise.mp3" },
@@ -271,11 +271,12 @@
                 stationDisplay.textContent = `[ ${s.isLive ? 'LIVE' : 'LOCKED'} ] > ${s.name} (${closest.toFixed(1)} MHz)`;
                 playSource(s.file, s.isLive);
                 
-                // Optional: Track station tunes as custom GA4 events
+                // Google Analytics tracking event for tuning to a station
                 if (typeof gtag === 'function') {
                     gtag('event', 'tune_station', {
-                        station_name: s.name,
-                        frequency: closest.toFixed(1)
+                        'station_frequency': closest.toFixed(1),
+                        'station_name': s.name,
+                        'is_live': s.isLive ? 'true' : 'false'
                     });
                 }
             } else {
