@@ -48,21 +48,42 @@
             background: rgba(18, 10, 4, 0.6); border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 4px;
             display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold;
             color: var(--amber-glow); letter-spacing: 1px; text-shadow: 0 0 8px var(--amber-glow);
-            padding: 0 10px; text-align: center; z-index: 10; cursor: pointer;
-            transition: background 0.2s ease;
+            padding: 0 10px; text-align: center; z-index: 10;
         }
-        .screen-display:hover { background: rgba(40, 20, 8, 0.8); }
         .visualizer { position: absolute; top: 73.5%; left: 5%; right: 5%; height: 12.5%; pointer-events: none; z-index: 4; }
         #visualizerCanvas { display: block; width: 100%; height: 100%; }
+
+        /* Immersive Power Overlay */
+        .power-overlay {
+            position: absolute; inset: 0; background: rgba(11, 6, 4, 0.92);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 100; transition: opacity 0.5s ease; cursor: pointer; text-align: center; padding: 20px;
+        }
+        .power-overlay.hidden { opacity: 0; pointer-events: none; }
+        .power-btn {
+            background: linear-gradient(135deg, #3d1c0a, #1a0b04);
+            border: 2px solid var(--amber-glow); color: var(--amber-glow);
+            font-size: 14px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase;
+            padding: 16px 32px; border-radius: 8px; box-shadow: 0 0 20px rgba(255, 183, 51, 0.3);
+            cursor: pointer; transition: all 0.2s ease;
+        }
+        .power-btn:hover { background: #52270e; box-shadow: 0 0 30px rgba(255, 183, 51, 0.6); transform: scale(1.05); }
+        .power-subtext { font-size: 11px; color: #a68a6d; margin-top: 15px; letter-spacing: 1px; text-transform: uppercase; }
     </style>
 </head>
 <body>
     <div class="console-container">
+        <!-- Power Splash Overlay -->
+        <div class="power-overlay" id="powerOverlay">
+            <button class="power-btn">Turn On Receiver</button>
+            <div class="power-subtext">Tap to initialize audio & open studio stream</div>
+        </div>
+
         <div class="interactive-volume" id="volumeTrigger"></div>
         <div id="tuningBar" class="tuning-indicator-bar" style="left: 50%;"></div>
         <div class="interactive-dial" id="dialWindow"></div>
         <div class="interactive-tuning" id="tuningTrigger"></div>
-        <div class="screen-display" id="stationDisplay">RECEIVER STATUS: STANDBY — TAP HERE TO POWER ON</div>
+        <div class="screen-display" id="stationDisplay">RECEIVER ACTIVE — 88.0 MHz</div>
         <div class="visualizer"><canvas id="visualizerCanvas"></canvas></div>
     </div>
     <audio id="mainAudio" preload="auto" crossorigin="anonymous" playsinline></audio>
@@ -71,6 +92,7 @@
         const stationDisplay = document.getElementById('stationDisplay');
         const audioEl = document.getElementById('mainAudio');
         const dialWindow = document.getElementById('dialWindow');
+        const powerOverlay = document.getElementById('powerOverlay');
         const canvas = document.getElementById('visualizerCanvas');
         const ctx = canvas ? canvas.getContext('2d') : null;
 
@@ -279,7 +301,8 @@
             initAudio();
             isPowerOn = true;
             
-            // Synchronously assign source and fire play immediately within the touch event stack
+            powerOverlay.classList.add('hidden');
+            
             const s = stations[88.0];
             audioEl.src = s.file;
             audioEl.play().then(() => {
@@ -290,11 +313,7 @@
             });
         }
 
-        stationDisplay.addEventListener('click', () => {
-            if (!isPowerOn) {
-                powerOnReceiver();
-            }
-        });
+        powerOverlay.addEventListener('click', powerOnReceiver);
 
         let isDragging = false;
 
@@ -305,9 +324,7 @@
         }
 
         dialWindow.addEventListener('pointerdown', (e) => {
-            if (!isPowerOn) {
-                powerOnReceiver();
-            }
+            if (!isPowerOn) return;
             isDragging = true;
             dialWindow.setPointerCapture(e.pointerId);
             updateFromPointer(e);
