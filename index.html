@@ -36,12 +36,12 @@
         }
         .interactive-volume { position: absolute; top: 24%; left: 5.5%; width: 8%; height: 20%; cursor: pointer; border-radius: 50%; z-index: 5; }
         .interactive-tuning { position: absolute; top: 24%; right: 5.5%; width: 8%; height: 20%; cursor: pointer; border-radius: 50%; z-index: 5; }
-        .interactive-dial { position: absolute; top: 21.5%; left: 17%; right: 17%; height: 27%; cursor: pointer; z-index: 5; }
+        .interactive-dial { position: absolute; top: 21.5%; left: 17%; right: 17%; height: 27%; cursor: ew-resize; z-index: 5; touch-action: none; }
         .tuning-indicator-bar {
             position: absolute; top: 27.5%; height: 5.2%; width: 10px;
             background: linear-gradient(to bottom, rgba(255,150,0,0.6), #ffe885 50%, rgba(255,150,0,0.6));
             border-radius: 2px; box-shadow: 0 0 10px 2px var(--amber-glow), inset 0 0 3px #fff;
-            transform: translateX(-50%); pointer-events: none; transition: left 0.05s ease-out; z-index: 3;
+            transform: translateX(-50%); pointer-events: none; transition: left 0.15s cubic-bezier(0.1, 1, 0.1, 1); z-index: 3;
         }
         .screen-display {
             position: absolute; top: 56.5%; left: 27%; right: 27%; height: 8.5%;
@@ -74,6 +74,7 @@
 
         let audioCtx = null, analyser = null, sourceNode = null, gainNode = null, hls = null;
         let isPowerOn = false, particles = [];
+        let currentFreq = 88.0;
 
         function initParticles(w, h) {
             particles = Array.from({length: 20}, () => ({
@@ -176,7 +177,7 @@
             89.8: { name: "Echo Beta", file: "audio/eveille.mp3" },
             90.0: { name: "Kappa Zeta", file: "audio/automatism.mp3" },
             90.3: { name: "CKUT 90.3 FM / Montréal (McGill)", file: "https://ckut.out.airtime.pro/ckut_a", isLive: true },
-            90.7: { name: "Echo Alpha", file: "audio/light.mp3" },
+            90.7: { name: "Echo Alpha", file: "audio/lite.mp3" },
             91.0: { name: "Mu Delta", file: "audio/bliss.mp3" },
             91.2: { name: "Echo Theta", file: "audio/there.mp3" },
             91.5: { name: "Sessions", file: "audio/jam-sessions.mp3" },
@@ -203,7 +204,7 @@
             98.5: { name: "ICI Musique Classique", file: "https://rcavliveaudio.akamaized.net/hls/live/2007000/MUSE/master.m3u8", isLive: true },
             99.0: { name: "Iota Stigma", file: "audio/melancoly-in-flat.mp3" },
             99.5: { name: "Mu Epsilon", file: "audio/monster.mp3" },
-            100.0: { name: "Iota Epsilon", file: "audio/narcosis.mp3" },
+            100.0: { name: "Iota Epsilon", file: "audio/narc-osis.mp3" },
             100.5: { name: "Lambda Nu", file: "audio/next-flight-home.mp3" },
             101.0: { name: "Lambda", file: "audio/oticons.mp3" },
             101.5: { name: "Lambda Gamma", file: "audio/pacis.mp3" },
@@ -260,6 +261,7 @@
 
         function tune(freq) {
             if (!isPowerOn) return;
+            currentFreq = freq;
             const percent = 18.0 + ((freq - 88.0) / (108.0 - 88.0)) * 64.0;
             tuningBar.style.left = `${percent}%`;
 
@@ -269,32 +271,57 @@
             if (Math.abs(freq - closest) <= 0.25) {
                 const s = stations[closest];
                 stationDisplay.textContent = `[ ${s.isLive ? 'LIVE' : 'LOCKED'} ] > ${s.name} (${closest.toFixed(1)} MHz)`;
-                playSource(s.file, s.isLive);
-                
-                // Google Analytics tracking event for tuning to a station
-                if (typeof gtag === 'function') {
-                    gtag('event', 'tune_station', {
-                        'station_frequency': closest.toFixed(1),
-                        'station_name': s.name,
-                        'is_live': s.isLive ? 'true' : 'false'
-                    });
+                if (audioEl.src !== s.file && (!audioEl.src.endsWith(s.file))) {
+                    playSource(s.file, s.isLive);
                 }
             } else {
                 if (hls) { hls.destroy(); hls = null; }
                 stationDisplay.textContent = `MUTED (DEAD AIR)... [ FREQ: ${freq.toFixed(1)} MHz ]`;
-                audioEl.pause(); audioEl.src = "";
+                if (!audioEl.paused) {
+                    audioEl.pause();
+                    audioEl.src = "";
+                }
             }
         }
 
-        dialWindow.addEventListener('click', (e) => {
+        // Pointer event dragging for smooth slide tuning (mouse and touch support)
+        let isDragging = false;
+
+        function updateFromPointer(e) {
+            const rect = dialWindow.getBoundingClientRect();
+            const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            tune(88.0 + (ratio * 20.0));
+        }
+
+        dialWindow.addEventListener('pointerdown', (e) => {
             initAudio();
             if (!isPowerOn) {
                 isPowerOn = true;
-                tune(88.0); return;
+                tune(88.0);
+                return;
             }
-            const rect = dialWindow.getBoundingClientRect();
-            const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-            tune(Number((88.0 + (ratio * 20.0)).toFixed(1)));
+            isDragging = true;
+            dialWindow.setPointerCapture(e.pointerId);
+            updateFromPointer(e);
+        });
+
+        dialWindow.addEventListener('pointermove', (e) => {
+            if (!isDragging || !isPowerOn) return;
+            updateFromPointer(e);
+        });
+
+        dialWindow.addEventListener('pointerup', (e) => {
+            if (isDragging) {
+                isDragging = false;
+                try { dialWindow.releasePointerCapture(e.pointerId); } catch(err) {}
+            }
+        });
+
+        dialWindow.addEventListener('pointercancel', (e) => {
+            if (isDragging) {
+                isDragging = false;
+                try { dialWindow.releasePointerCapture(e.pointerId); } catch(err) {}
+            }
         });
 
         window.addEventListener('DOMContentLoaded', () => {
