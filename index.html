@@ -232,31 +232,28 @@
             audioEl.src = ""; 
             audioEl.loop = !isLive;
 
-            const executePlay = () => {
-                if (isLive && url.endsWith('.m3u8')) {
-                    if (Hls.isSupported()) {
-                        hls = new Hls(); 
-                        hls.loadSource(url); 
-                        hls.attachMedia(audioEl);
-                        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                            audioEl.play().catch(err => console.warn("HLS Play block intercepted:", err));
-                        });
-                    } else if (audioEl.canPlayType('application/vnd.apple.mpegurl')) {
-                        audioEl.src = url; 
-                        audioEl.load(); 
-                        audioEl.play().catch(err => console.warn("Native HLS Play block intercepted:", err));
-                    }
-                } else {
+            // Synchronously resume AudioContext for mobile browsers
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            if (isLive && url.endsWith('.m3u8')) {
+                if (Hls.isSupported()) {
+                    hls = new Hls(); 
+                    hls.loadSource(url); 
+                    hls.attachMedia(audioEl);
+                    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                        audioEl.play().catch(err => console.warn("HLS Play block intercepted:", err));
+                    });
+                } else if (audioEl.canPlayType('application/vnd.apple.mpegurl')) {
                     audioEl.src = url; 
                     audioEl.load(); 
-                    audioEl.play().catch(err => console.warn("MP3 Play block intercepted:", err));
+                    audioEl.play().catch(err => console.warn("Native HLS Play block intercepted:", err));
                 }
-            };
-
-            if (audioCtx && audioCtx.state === 'suspended') {
-                audioCtx.resume().then(executePlay);
             } else {
-                executePlay();
+                audioEl.src = url; 
+                audioEl.load(); 
+                audioEl.play().catch(err => console.warn("MP3 Play block intercepted:", err));
             }
         }
 
@@ -285,7 +282,6 @@
             }
         }
 
-        // Pointer event dragging for smooth slide tuning (mouse and touch support)
         let isDragging = false;
 
         function updateFromPointer(e) {
@@ -298,8 +294,6 @@
             initAudio();
             if (!isPowerOn) {
                 isPowerOn = true;
-                tune(88.0);
-                return;
             }
             isDragging = true;
             dialWindow.setPointerCapture(e.pointerId);
@@ -323,20 +317,6 @@
                 isDragging = false;
                 try { dialWindow.releasePointerCapture(e.pointerId); } catch(err) {}
             }
-        });
-
-        window.addEventListener('DOMContentLoaded', () => {
-            const wake = () => {
-                initAudio();
-                if (!isPowerOn) {
-                    isPowerOn = true;
-                    tune(88.0);
-                }
-                window.removeEventListener('click', wake);
-                window.removeEventListener('touchstart', wake);
-            };
-            window.addEventListener('click', wake);
-            window.addEventListener('touchstart', wake);
         });
     </script>
 </body>
