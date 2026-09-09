@@ -77,7 +77,6 @@
         let audioCtx = null, analyser = null, sourceNode = null, gainNode = null, hls = null;
         let isPowerOn = false, particles = [];
         let currentFreq = 88.0;
-        let isCrossSiteStream = false;
 
         const stations = {
             88.0: { name: "Iota Delta", file: "audio/metallica-ballerina.mp3" },
@@ -173,10 +172,7 @@
                     gainNode.connect(analyser);
                     analyser.connect(audioCtx.destination);
                 } catch (e) { 
-                    console.warn("Web Audio / CORS restriction caught:", e);
-                    try {
-                        if (sourceNode && audioCtx) sourceNode.connect(audioCtx.destination);
-                    } catch(err) {}
+                    console.warn("Web Audio Init Error:", e); 
                 }
             }
             if (audioCtx && audioCtx.state === 'suspended') {
@@ -201,22 +197,20 @@
             const buf = analyser ? analyser.frequencyBinCount : 512;
             const data = new Uint8Array(buf);
             
-            let hasAudioPlaying = isPowerOn && !audioEl.paused && audioEl.readyState >= 2;
+            let isPlaying = isPowerOn && !audioEl.paused && audioEl.readyState >= 2;
 
-            if (analyser && hasAudioPlaying) {
+            if (analyser && isPlaying) {
                 try { 
-                    if (isCrossSiteStream) {
-                        data.fill(128);
-                        const time = Date.now() * 0.005;
+                    analyser.getByteTimeDomainData(data); 
+                    
+                    let sum = 0;
+                    for (let i = 0; i < buf; i++) {
+                        sum += Math.abs(data[i] - 128);
+                    }
+                    if (sum === 0) {
+                        const time = Date.now() * 0.004;
                         for (let i = 0; i < buf; i++) {
-                            data[i] = 128 + Math.sin(time + i * 0.1) * 25;
-                        }
-                    } else {
-                        analyser.getByteTimeDomainData(data);
-                        let sum = 0;
-                        for(let i=0; i<buf; i++) sum += Math.abs(data[i] - 128);
-                        if (sum === 0) {
-                            isCrossSiteStream = true;
+                            data[i] = 128 + Math.sin(time + i * 0.15) * 20 * Math.sin(time * 0.5);
                         }
                     }
                 } catch (e) { 
@@ -227,7 +221,7 @@
             }
 
             ctx.lineWidth = 1.5;
-            ctx.strokeStyle = (hasAudioPlaying) ? 'rgba(255, 157, 0, 0.85)' : 'rgba(74, 44, 0, 0.4)';
+            ctx.strokeStyle = (isPlaying) ? 'rgba(255, 157, 0, 0.85)' : 'rgba(74, 44, 0, 0.4)';
             ctx.beginPath();
             const slice = w / buf;
             for (let i = 0, x = 0; i < buf; i++, x += slice) {
@@ -243,9 +237,6 @@
         function playSource(url, isLive) {
             if (!isPowerOn) return;
             if (hls) { hls.destroy(); hls = null; }
-            
-            isCrossSiteStream = isLive || !url.startsWith(window.location.origin);
-
             audioEl.pause(); 
             audioEl.src = ""; 
             audioEl.loop = !isLive;
