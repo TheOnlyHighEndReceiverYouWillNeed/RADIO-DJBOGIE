@@ -77,6 +77,7 @@
         let audioCtx = null, analyser = null, sourceNode = null, gainNode = null, hls = null;
         let isPowerOn = false, particles = [];
         let currentFreq = 88.0;
+        let dynamicEnergy = 0;
 
         const stations = {
             88.0: { name: "Iota Delta", file: "audio/metallica-ballerina.mp3" },
@@ -207,10 +208,14 @@
                     for (let i = 0; i < buf; i++) {
                         sum += Math.abs(data[i] - 128);
                     }
+
                     if (sum === 0) {
-                        const time = Date.now() * 0.004;
+                        dynamicEnergy += (Math.random() * 0.4 - 0.2);
+                        dynamicEnergy = Math.max(0.2, Math.min(1.5, dynamicEnergy));
+                        
+                        const time = performance.now() * 0.008 * dynamicEnergy;
                         for (let i = 0; i < buf; i++) {
-                            data[i] = 128 + Math.sin(time + i * 0.15) * 20 * Math.sin(time * 0.5);
+                            data[i] = 128 + Math.sin(time + (i * 0.2)) * (15 + dynamicEnergy * 10);
                         }
                     }
                 } catch (e) { 
@@ -218,6 +223,7 @@
                 }
             } else {
                 data.fill(128);
+                dynamicEnergy = 0;
             }
 
             ctx.lineWidth = 1.5;
@@ -304,6 +310,25 @@
                 tune(currentFreq);
             });
         }
+
+        // Global Event Interceptor (Protocol 2) to unlock audio context instantly upon any user touch/click/key
+        const unlockGlobalAudio = () => {
+            if (!isPowerOn) {
+                powerOnReceiver();
+            } else {
+                initAudio();
+                if (audioEl.paused && audioEl.src) {
+                    audioEl.play().catch(e => {});
+                }
+            }
+            document.removeEventListener('click', unlockGlobalAudio);
+            document.removeEventListener('keydown', unlockGlobalAudio);
+            document.removeEventListener('touchstart', unlockGlobalAudio);
+        };
+
+        document.addEventListener('click', unlockGlobalAudio, { once: true });
+        document.addEventListener('keydown', unlockGlobalAudio, { once: true });
+        document.addEventListener('touchstart', unlockGlobalAudio, { once: true });
 
         stationDisplay.addEventListener('click', () => {
             if (!isPowerOn) {
