@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Radio Console</title>
+    <title>RADIO-DJBOGEY</title>
     
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-7GLPZ5M24E"></script>
@@ -28,6 +28,20 @@
         body::before {
             content: ''; position: fixed; inset: 0; background: rgba(11, 6, 4, 0.75); pointer-events: none; z-index: 1;
         }
+        /* Safari Boot Overlay Gate */
+        .boot-overlay {
+            position: fixed; inset: 0; background: rgba(5, 2, 1, 0.92);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 100; cursor: pointer; transition: opacity 0.4s ease;
+        }
+        .boot-overlay.hidden { opacity: 0; pointer-events: none; }
+        .boot-button {
+            border: 2px solid var(--amber-glow); background: rgba(40, 20, 8, 0.8);
+            color: var(--amber-glow); padding: 16px 32px; font-size: 14px; font-weight: bold;
+            letter-spacing: 2px; border-radius: 6px; box-shadow: 0 0 20px rgba(255,183,51,0.3);
+            text-shadow: 0 0 8px var(--amber-glow); pointer-events: none;
+        }
+
         .console-container {
             position: relative; width: 100%; max-width: 900px; aspect-ratio: 16 / 9;
             background: #2b1408 url('photo/DJradioconsole-image.jpg') center/100% 100% no-repeat;
@@ -47,29 +61,34 @@
             background: rgba(18, 10, 4, 0.6); border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 4px;
             display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold;
             color: var(--amber-glow); letter-spacing: 1px; text-shadow: 0 0 8px var(--amber-glow);
-            padding: 0 10px; text-align: center; z-index: 10; cursor: pointer;
-            transition: background 0.2s ease;
+            padding: 0 10px; text-align: center; z-index: 10;
         }
-        .screen-display:hover { background: rgba(40, 20, 8, 0.8); }
         .visualizer { position: absolute; top: 73.5%; left: 5%; right: 5%; height: 12.5%; pointer-events: none; z-index: 4; }
         #visualizerCanvas { display: block; width: 100%; height: 100%; }
     </style>
 </head>
 <body>
+    <div class="boot-overlay" id="bootOverlay">
+        <div class="boot-button">INITIALIZE CONSOLE (FREQ 88.0 MHz)</div>
+    </div>
+
     <div class="console-container">
         <div class="interactive-volume" id="volumeTrigger"></div>
-        <div id="tuningBar" class="tuning-indicator-bar" style="left: 50%;"></div>
+        <div id="tuningBar" class="tuning-indicator-bar" style="left: 18%;"></div>
         <div class="interactive-dial" id="dialWindow"></div>
         <div class="interactive-tuning" id="tuningTrigger"></div>
-        <div class="screen-display" id="stationDisplay">RECEIVER STATUS: STANDBY — TAP HERE TO POWER ON</div>
+        <div class="screen-display" id="stationDisplay">RECEIVER STATUS: STANDBY — CLICK TO BOOT</div>
         <div class="visualizer"><canvas id="visualizerCanvas"></canvas></div>
     </div>
+
     <audio id="mainAudio" preload="auto" crossorigin="anonymous" playsinline></audio>
+
     <script>
         const tuningBar = document.getElementById('tuningBar');
         const stationDisplay = document.getElementById('stationDisplay');
         const audioEl = document.getElementById('mainAudio');
         const dialWindow = document.getElementById('dialWindow');
+        const bootOverlay = document.getElementById('bootOverlay');
         const canvas = document.getElementById('visualizerCanvas');
         const ctx = canvas ? canvas.getContext('2d') : null;
 
@@ -154,29 +173,24 @@
             initParticles(rect.width, rect.height);
         }
 
-        function initAudio() {
+        function initAudioPipeline() {
             if (!audioCtx) {
-                try {
-                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-                    audioCtx = new AudioContextClass();
-                    analyser = audioCtx.createAnalyser();
-                    analyser.fftSize = 1024; 
-                    analyser.smoothingTimeConstant = 0.6;
-                    gainNode = audioCtx.createGain();
-                    gainNode.gain.setValueAtTime(0.8, audioCtx.currentTime);
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContextClass();
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 1024;
+                analyser.smoothingTimeConstant = 0.6;
+                gainNode = audioCtx.createGain();
+                gainNode.gain.setValueAtTime(0.8, audioCtx.currentTime);
 
-                    if (!sourceNode) {
-                        sourceNode = audioCtx.createMediaElementSource(audioEl);
-                    }
-                    
-                    sourceNode.connect(gainNode);
-                    gainNode.connect(analyser);
-                    analyser.connect(audioCtx.destination);
-                } catch (e) { 
-                    console.warn("Web Audio Init Error:", e); 
+                if (!sourceNode) {
+                    sourceNode = audioCtx.createMediaElementSource(audioEl);
                 }
+                sourceNode.connect(gainNode);
+                gainNode.connect(analyser);
+                analyser.connect(audioCtx.destination);
             }
-            if (audioCtx && audioCtx.state === 'suspended') {
+            if (audioCtx.state === 'suspended') {
                 audioCtx.resume();
             }
         }
@@ -197,37 +211,29 @@
 
             const buf = analyser ? analyser.frequencyBinCount : 512;
             const data = new Uint8Array(buf);
-            
             let isPlaying = isPowerOn && !audioEl.paused && audioEl.readyState >= 2;
 
             if (analyser && isPlaying) {
-                try { 
-                    analyser.getByteTimeDomainData(data); 
-                    
+                try {
+                    analyser.getByteTimeDomainData(data);
                     let sum = 0;
-                    for (let i = 0; i < buf; i++) {
-                        sum += Math.abs(data[i] - 128);
-                    }
-
+                    for (let i = 0; i < buf; i++) sum += Math.abs(data[i] - 128);
                     if (sum === 0) {
                         dynamicEnergy += (Math.random() * 0.4 - 0.2);
                         dynamicEnergy = Math.max(0.2, Math.min(1.5, dynamicEnergy));
-                        
                         const time = performance.now() * 0.008 * dynamicEnergy;
                         for (let i = 0; i < buf; i++) {
                             data[i] = 128 + Math.sin(time + (i * 0.2)) * (15 + dynamicEnergy * 10);
                         }
                     }
-                } catch (e) { 
-                    data.fill(128); 
-                }
+                } catch (e) { data.fill(128); }
             } else {
                 data.fill(128);
                 dynamicEnergy = 0;
             }
 
             ctx.lineWidth = 1.5;
-            ctx.strokeStyle = (isPlaying) ? 'rgba(255, 157, 0, 0.85)' : 'rgba(74, 44, 0, 0.4)';
+            ctx.strokeStyle = isPlaying ? 'rgba(255, 157, 0, 0.85)' : 'rgba(74, 44, 0, 0.4)';
             ctx.beginPath();
             const slice = w / buf;
             for (let i = 0, x = 0; i < buf; i++, x += slice) {
@@ -241,10 +247,9 @@
         resize(); requestAnimationFrame(draw);
 
         function playSource(url, isLive) {
-            if (!isPowerOn) return;
             if (hls) { hls.destroy(); hls = null; }
-            audioEl.pause(); 
-            audioEl.src = ""; 
+            audioEl.pause();
+            audioEl.src = "";
             audioEl.loop = !isLive;
 
             if (audioCtx && audioCtx.state === 'suspended') {
@@ -252,25 +257,24 @@
             }
 
             if (isLive && audioEl.canPlayType('application/vnd.apple.mpegurl')) {
-                audioEl.src = url; 
-                audioEl.load(); 
+                audioEl.src = url;
+                audioEl.load();
                 audioEl.play().catch(err => console.warn("Native HLS Play block:", err));
             } else if (isLive && Hls.isSupported()) {
-                hls = new Hls(); 
-                hls.loadSource(url); 
+                hls = new Hls();
+                hls.loadSource(url);
                 hls.attachMedia(audioEl);
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
                     audioEl.play().catch(err => console.warn("HLS Play block:", err));
                 });
             } else {
-                audioEl.src = url; 
-                audioEl.load(); 
+                audioEl.src = url;
+                audioEl.load();
                 audioEl.play().catch(err => console.warn("Media Play block:", err));
             }
         }
 
         function tune(freq) {
-            if (!isPowerOn) return;
             currentFreq = freq;
             const percent = 18.0 + ((freq - 88.0) / (108.0 - 88.0)) * 64.0;
             tuningBar.style.left = `${percent}%`;
@@ -281,7 +285,7 @@
             if (Math.abs(freq - closest) <= 0.25) {
                 const s = stations[closest];
                 stationDisplay.textContent = `[ ${s.isLive ? 'LIVE' : 'LOCKED'} ] > ${s.name} (${closest.toFixed(1)} MHz)`;
-                if (audioEl.src !== s.file && (!audioEl.src.endsWith(s.file))) {
+                if (audioEl.src !== s.file && !audioEl.src.endsWith(s.file)) {
                     playSource(s.file, s.isLive);
                 }
             } else {
@@ -294,45 +298,22 @@
             }
         }
 
-        function powerOnReceiver() {
-            if (isPowerOn) return;
-            initAudio();
+        bootOverlay.addEventListener('pointerdown', () => {
+            initAudioPipeline();
             isPowerOn = true;
+            bootOverlay.classList.add('hidden');
             
             const s = stations[88.0];
             audioEl.src = s.file;
             audioEl.play().then(() => {
-                tune(currentFreq);
+                tune(88.0);
             }).catch(err => {
-                console.warn("Power action intercepted by policy gate:", err);
-                tune(currentFreq);
+                console.warn("Boot audio execution warning:", err);
+                tune(88.0);
             });
-        }
-
-        const unlockGlobalAudio = (e) => {
-            initAudio();
-            if (!isPowerOn) {
-                powerOnReceiver();
-            } else if (audioEl.paused && audioEl.src) {
-                audioEl.play().catch(() => {});
-            }
-            document.removeEventListener('pointerdown', unlockGlobalAudio);
-            document.removeEventListener('touchstart', unlockGlobalAudio);
-            document.removeEventListener('click', unlockGlobalAudio);
-        };
-
-        document.addEventListener('pointerdown', unlockGlobalAudio, { once: true, passive: true });
-        document.addEventListener('touchstart', unlockGlobalAudio, { once: true, passive: true });
-        document.addEventListener('click', unlockGlobalAudio, { once: true });
-
-        stationDisplay.addEventListener('click', () => {
-            if (!isPowerOn) {
-                powerOnReceiver();
-            }
-        });
+        }, { once: true });
 
         let isDragging = false;
-
         function updateFromPointer(e) {
             const rect = dialWindow.getBoundingClientRect();
             const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
@@ -340,9 +321,7 @@
         }
 
         dialWindow.addEventListener('pointerdown', (e) => {
-            if (!isPowerOn) {
-                powerOnReceiver();
-            }
+            if (!isPowerOn) return;
             isDragging = true;
             dialWindow.setPointerCapture(e.pointerId);
             updateFromPointer(e);
