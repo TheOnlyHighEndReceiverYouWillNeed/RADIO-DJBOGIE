@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>RADIO-DJBOGEY</title>
+    <title>Radio Console</title>
     
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-7GLPZ5M24E"></script>
@@ -28,18 +28,17 @@
         body::before {
             content: ''; position: fixed; inset: 0; background: rgba(11, 6, 4, 0.75); pointer-events: none; z-index: 1;
         }
-        /* Safari Boot Overlay Gate */
         .boot-overlay {
-            position: fixed; inset: 0; background: rgba(5, 2, 1, 0.92);
+            position: fixed; inset: 0; background: rgba(5, 2, 1, 0.95);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             z-index: 100; cursor: pointer; transition: opacity 0.4s ease;
         }
         .boot-overlay.hidden { opacity: 0; pointer-events: none; }
         .boot-button {
-            border: 2px solid var(--amber-glow); background: rgba(40, 20, 8, 0.8);
-            color: var(--amber-glow); padding: 16px 32px; font-size: 14px; font-weight: bold;
-            letter-spacing: 2px; border-radius: 6px; box-shadow: 0 0 20px rgba(255,183,51,0.3);
-            text-shadow: 0 0 8px var(--amber-glow); pointer-events: none;
+            border: 2px solid var(--amber-glow); background: rgba(40, 20, 8, 0.9);
+            color: var(--amber-glow); padding: 18px 36px; font-size: 15px; font-weight: bold;
+            letter-spacing: 2px; border-radius: 6px; box-shadow: 0 0 25px rgba(255,183,51,0.4);
+            text-shadow: 0 0 10px var(--amber-glow); pointer-events: none; text-align: center;
         }
 
         .console-container {
@@ -77,7 +76,7 @@
         <div id="tuningBar" class="tuning-indicator-bar" style="left: 18%;"></div>
         <div class="interactive-dial" id="dialWindow"></div>
         <div class="interactive-tuning" id="tuningTrigger"></div>
-        <div class="screen-display" id="stationDisplay">RECEIVER STATUS: STANDBY — CLICK TO BOOT</div>
+        <div class="screen-display" id="stationDisplay">RECEIVER STATUS: STANDBY</div>
         <div class="visualizer"><canvas id="visualizerCanvas"></canvas></div>
     </div>
 
@@ -298,17 +297,18 @@
             }
         }
 
-        bootOverlay.addEventListener('pointerdown', () => {
+        bootOverlay.addEventListener('click', () => {
             initAudioPipeline();
             isPowerOn = true;
             bootOverlay.classList.add('hidden');
-            
+
             const s = stations[88.0];
             audioEl.src = s.file;
+            audioEl.load();
             audioEl.play().then(() => {
                 tune(88.0);
             }).catch(err => {
-                console.warn("Boot audio execution warning:", err);
+                console.warn("Direct play execution error:", err);
                 tune(88.0);
             });
         }, { once: true });
