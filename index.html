@@ -11,7 +11,6 @@
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-
       gtag('config', 'G-7GLPZ5M24E');
     </script>
 
@@ -158,7 +157,8 @@
         function initAudio() {
             if (!audioCtx) {
                 try {
-                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    audioCtx = new AudioContextClass();
                     analyser = audioCtx.createAnalyser();
                     analyser.fftSize = 1024; 
                     analyser.smoothingTimeConstant = 0.6;
@@ -251,23 +251,21 @@
                 audioCtx.resume();
             }
 
-            if (isLive && url.endsWith('.m3u8')) {
-                if (Hls.isSupported()) {
-                    hls = new Hls(); 
-                    hls.loadSource(url); 
-                    hls.attachMedia(audioEl);
-                    hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                        audioEl.play().catch(err => console.warn("HLS Play block:", err));
-                    });
-                } else if (audioEl.canPlayType('application/vnd.apple.mpegurl')) {
-                    audioEl.src = url; 
-                    audioEl.load(); 
-                    audioEl.play().catch(err => console.warn("Native HLS Play block:", err));
-                }
+            if (isLive && audioEl.canPlayType('application/vnd.apple.mpegurl')) {
+                audioEl.src = url; 
+                audioEl.load(); 
+                audioEl.play().catch(err => console.warn("Native HLS Play block:", err));
+            } else if (isLive && Hls.isSupported()) {
+                hls = new Hls(); 
+                hls.loadSource(url); 
+                hls.attachMedia(audioEl);
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    audioEl.play().catch(err => console.warn("HLS Play block:", err));
+                });
             } else {
                 audioEl.src = url; 
                 audioEl.load(); 
-                audioEl.play().catch(err => console.warn("MP3 Play block:", err));
+                audioEl.play().catch(err => console.warn("Media Play block:", err));
             }
         }
 
@@ -306,29 +304,26 @@
             audioEl.play().then(() => {
                 tune(currentFreq);
             }).catch(err => {
-                console.warn("Power prime action intercepted:", err);
+                console.warn("Power action intercepted by policy gate:", err);
                 tune(currentFreq);
             });
         }
 
-        // Global Event Interceptor (Protocol 2) to unlock audio context instantly upon any user touch/click/key
-        const unlockGlobalAudio = () => {
+        const unlockGlobalAudio = (e) => {
+            initAudio();
             if (!isPowerOn) {
                 powerOnReceiver();
-            } else {
-                initAudio();
-                if (audioEl.paused && audioEl.src) {
-                    audioEl.play().catch(e => {});
-                }
+            } else if (audioEl.paused && audioEl.src) {
+                audioEl.play().catch(() => {});
             }
-            document.removeEventListener('click', unlockGlobalAudio);
-            document.removeEventListener('keydown', unlockGlobalAudio);
+            document.removeEventListener('pointerdown', unlockGlobalAudio);
             document.removeEventListener('touchstart', unlockGlobalAudio);
+            document.removeEventListener('click', unlockGlobalAudio);
         };
 
+        document.addEventListener('pointerdown', unlockGlobalAudio, { once: true, passive: true });
+        document.addEventListener('touchstart', unlockGlobalAudio, { once: true, passive: true });
         document.addEventListener('click', unlockGlobalAudio, { once: true });
-        document.addEventListener('keydown', unlockGlobalAudio, { once: true });
-        document.addEventListener('touchstart', unlockGlobalAudio, { once: true });
 
         stationDisplay.addEventListener('click', () => {
             if (!isPowerOn) {
