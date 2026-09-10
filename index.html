@@ -34,11 +34,20 @@
             z-index: 100; cursor: pointer; transition: opacity 0.4s ease;
         }
         .boot-overlay.hidden { opacity: 0; pointer-events: none; }
+        .boot-button-wrapper {
+            background-image: url('photo/image_4115ad.png');
+            background-size: cover;
+            background-position: center;
+            border: 2px solid var(--amber-glow);
+            padding: 18px 36px;
+            border-radius: 6px;
+            box-shadow: 0 0 25px rgba(255,183,51,0.4);
+            pointer-events: none;
+            text-align: center;
+        }
         .boot-button {
-            border: 2px solid var(--amber-glow); background: rgba(40, 20, 8, 0.9);
-            color: var(--amber-glow); padding: 18px 36px; font-size: 15px; font-weight: bold;
-            letter-spacing: 2px; border-radius: 6px; box-shadow: 0 0 25px rgba(255,183,51,0.4);
-            text-shadow: 0 0 10px var(--amber-glow); pointer-events: none; text-align: center;
+            color: var(--amber-glow); font-size: 15px; font-weight: bold;
+            letter-spacing: 2px; text-shadow: 0 0 10px var(--amber-glow);
         }
 
         .console-container {
@@ -68,7 +77,9 @@
 </head>
 <body>
     <div class="boot-overlay" id="bootOverlay">
-        <div class="boot-button">INITIALIZE CONSOLE (FREQ 88.0 MHz)</div>
+        <div class="boot-button-wrapper">
+            <div class="boot-button">INITIALIZE CONSOLE (FREQ 88.0 MHz)</div>
+        </div>
     </div>
 
     <div class="console-container">
