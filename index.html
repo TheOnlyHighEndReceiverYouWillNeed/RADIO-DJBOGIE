@@ -273,9 +273,12 @@
             }
         }
 
-        function tune(freq) {
+        function tune(rawFreq) {
             if (!isPowerOn) return;
+            
+            const freq = Math.round(rawFreq * 10) / 10;
             currentFreq = freq;
+            
             const percent = 18.0 + ((freq - 88.0) / (108.0 - 88.0)) * 64.0;
             tuningBar.style.left = `${percent}%`;
 
@@ -283,10 +286,13 @@
             const closest = keys.reduce((p, c) => Math.abs(c - freq) < Math.abs(p - freq) ? c : p);
 
             if (Math.abs(freq - closest) <= 0.25) {
-                const s = stations[closest.toFixed(1)] || stations[closest];
-                stationDisplay.textContent = `[ ${s.isLive ? 'LIVE' : 'LOCKED'} ] > ${s.name} (${closest.toFixed(1)} MHz)`;
-                if (audioEl.src !== s.file && (!audioEl.src.endsWith(s.file))) {
-                    playSource(s.file, s.isLive);
+                const keyStr = closest.toFixed(1);
+                const s = stations[keyStr];
+                if (s) {
+                    stationDisplay.textContent = `[ ${s.isLive ? 'LIVE' : 'LOCKED'} ] > ${s.name} (${keyStr} MHz)`;
+                    if (audioEl.src !== s.file && (!audioEl.src.endsWith(s.file))) {
+                        playSource(s.file, s.isLive);
+                    }
                 }
             } else {
                 if (hls) { hls.destroy(); hls = null; }
@@ -324,7 +330,8 @@
         function updateFromPointer(e) {
             const rect = dialWindow.getBoundingClientRect();
             const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-            tune(88.0 + (ratio * 20.0));
+            const quantizedFreq = Math.round((88.0 + (ratio * 20.0)) * 10) / 10;
+            tune(quantizedFreq);
         }
 
         dialWindow.addEventListener('pointerdown', (e) => {
