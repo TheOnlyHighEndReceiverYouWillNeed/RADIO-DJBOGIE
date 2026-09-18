@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Radio Console</title>
+    <title>RADIO-DJBOGEY</title>
     
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-7GLPZ5M24E"></script>
@@ -11,7 +11,6 @@
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-
       gtag('config', 'G-7GLPZ5M24E');
     </script>
 
@@ -79,7 +78,6 @@
         let currentFreq = 88.0;
         let dynamicEnergy = 0;
 
-        // All stations precisely 0.3 MHz apart
         const stations = {
             88.0: { name: "Pi Delta", file: "audio/absence-motive.mp3" },
             88.3: { name: "ICI Première / Montréal", file: "https://rcavliveaudio.akamaized.net/hls/live/2006635/P-2QMTL0_MTL/master.m3u8", isLive: true },
@@ -169,12 +167,11 @@
                     if (!sourceNode) {
                         sourceNode = audioCtx.createMediaElementSource(audioEl);
                     }
-                    
                     sourceNode.connect(gainNode);
                     gainNode.connect(analyser);
                     analyser.connect(audioCtx.destination);
                 } catch (e) { 
-                    console.warn("Web Audio Init Error:", e); 
+                    console.warn("Web Audio Init Exception Handled:", e); 
                 }
             }
             if (audioCtx && audioCtx.state === 'suspended') {
@@ -198,30 +195,22 @@
 
             const buf = analyser ? analyser.frequencyBinCount : 512;
             const data = new Uint8Array(buf);
-            
             let isPlaying = isPowerOn && !audioEl.paused && audioEl.readyState >= 2;
 
             if (analyser && isPlaying) {
                 try { 
                     analyser.getByteTimeDomainData(data); 
-                    
                     let sum = 0;
-                    for (let i = 0; i < buf; i++) {
-                        sum += Math.abs(data[i] - 128);
-                    }
-
+                    for (let i = 0; i < buf; i++) { sum += Math.abs(data[i] - 128); }
                     if (sum === 0) {
                         dynamicEnergy += (Math.random() * 0.4 - 0.2);
                         dynamicEnergy = Math.max(0.2, Math.min(1.5, dynamicEnergy));
-                        
                         const time = performance.now() * 0.008 * dynamicEnergy;
                         for (let i = 0; i < buf; i++) {
                             data[i] = 128 + Math.sin(time + (i * 0.2)) * (15 + dynamicEnergy * 10);
                         }
                     }
-                } catch (e) { 
-                    data.fill(128); 
-                }
+                } catch (e) { data.fill(128); }
             } else {
                 data.fill(128);
                 dynamicEnergy = 0;
@@ -248,9 +237,7 @@
             audioEl.src = ""; 
             audioEl.loop = !isLive;
 
-            if (audioCtx && audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
+            initAudio();
 
             if (isLive && url.endsWith('.m3u8')) {
                 if (Hls.isSupported()) {
@@ -258,17 +245,32 @@
                     hls.loadSource(url); 
                     hls.attachMedia(audioEl);
                     hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                        audioEl.play().catch(err => console.warn("HLS Play block:", err));
+                        audioEl.play().catch(err => console.warn("HLS Play Block Handled:", err));
+                    });
+                    hls.on(Hls.Events.ERROR, (event, data) => {
+                        if (data.fatal) {
+                            switch (data.type) {
+                                case Hls.ErrorTypes.NETWORK_ERROR:
+                                    hls.startLoad();
+                                    break;
+                                case Hls.ErrorTypes.MEDIA_ERROR:
+                                    hls.recoverMediaError();
+                                    break;
+                                default:
+                                    hls.destroy();
+                                    break;
+                            }
+                        }
                     });
                 } else if (audioEl.canPlayType('application/vnd.apple.mpegurl')) {
                     audioEl.src = url; 
                     audioEl.load(); 
-                    audioEl.play().catch(err => console.warn("Native HLS Play block:", err));
+                    audioEl.play().catch(err => console.warn("Native HLS Block Handled:", err));
                 }
             } else {
                 audioEl.src = url; 
                 audioEl.load(); 
-                audioEl.play().catch(err => console.warn("MP3 Play block:", err));
+                audioEl.play().catch(err => console.warn("MP3 Play Block Handled:", err));
             }
         }
 
@@ -281,18 +283,12 @@
             const keys = Object.keys(stations).map(Number);
             const closest = keys.reduce((p, c) => Math.abs(c - freq) < Math.abs(p - freq) ? c : p);
 
-            if (Math.abs(freq - closest) <= 0.25) {
-                const s = stations[closest.toFixed(1)] || stations[closest];
-                stationDisplay.textContent = `[ ${s.isLive ? 'LIVE' : 'LOCKED'} ] > ${s.name} (${closest.toFixed(1)} MHz)`;
+            const exactKey = closest.toFixed(1);
+            const s = stations[exactKey];
+            if (s) {
+                stationDisplay.textContent = `[ ${s.isLive ? 'LIVE' : 'LOCKED'} ] > ${s.name} (${exactKey} MHz)`;
                 if (audioEl.src !== s.file && (!audioEl.src.endsWith(s.file))) {
                     playSource(s.file, s.isLive);
-                }
-            } else {
-                if (hls) { hls.destroy(); hls = null; }
-                stationDisplay.textContent = `MUTED (DEAD AIR)... [ FREQ: ${freq.toFixed(1)} MHz ]`;
-                if (!audioEl.paused) {
-                    audioEl.pause();
-                    audioEl.src = "";
                 }
             }
         }
@@ -307,15 +303,13 @@
             audioEl.play().then(() => {
                 tune(currentFreq);
             }).catch(err => {
-                console.warn("Power prime action intercepted:", err);
+                console.warn("Power State Sync Handled:", err);
                 tune(currentFreq);
             });
         }
 
         stationDisplay.addEventListener('click', () => {
-            if (!isPowerOn) {
-                powerOnReceiver();
-            }
+            powerOnReceiver();
         });
 
         let isDragging = false;
@@ -323,15 +317,15 @@
         function updateFromPointer(e) {
             const rect = dialWindow.getBoundingClientRect();
             const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-            tune(88.0 + (ratio * 20.0));
+            const keys = Object.keys(stations).map(Number);
+            const stationIndex = Math.round(ratio * (keys.length - 1));
+            tune(keys[stationIndex]);
         }
 
         dialWindow.addEventListener('pointerdown', (e) => {
-            if (!isPowerOn) {
-                powerOnReceiver();
-            }
+            powerOnReceiver();
             isDragging = true;
-            dialWindow.setPointerCapture(e.pointerId);
+            try { dialWindow.setPointerCapture(e.pointerId); } catch(err) {}
             updateFromPointer(e);
         });
 
