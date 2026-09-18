@@ -34,8 +34,8 @@
             background: #2b1408 url('photo/DJradioconsole-image.jpg') center/100% 100% no-repeat;
             box-shadow: 0 35px 75px rgba(0,0,0,0.95); border-radius: 12px; overflow: hidden; z-index: 2;
         }
-        .interactive-volume { position: absolute; top: 24%; left: 5.5%; width: 8%; height: 20%; cursor: pointer; border-radius: 50%; z-index: 5; touch-action: none; }
-        .interactive-tuning { position: absolute; top: 24%; right: 5.5%; width: 8%; height: 20%; cursor: pointer; border-radius: 50%; z-index: 5; touch-action: none; }
+        .interactive-volume { position: absolute; top: 24%; left: 5.5%; width: 8%; height: 20%; cursor: pointer; border-radius: 50%; z-index: 5; }
+        .interactive-tuning { position: absolute; top: 24%; right: 5.5%; width: 8%; height: 20%; cursor: pointer; border-radius: 50%; z-index: 5; }
         .interactive-dial { position: absolute; top: 21.5%; left: 17%; right: 17%; height: 27%; cursor: ew-resize; z-index: 5; touch-action: none; }
         .tuning-indicator-bar {
             position: absolute; top: 27.5%; height: 5.2%; width: 10px;
@@ -58,10 +58,10 @@
 </head>
 <body>
     <div class="console-container">
-        <div class="interactive-volume" id="volumeTrigger" title="Volume Knob (Drag vertically to adjust)"></div>
+        <div class="interactive-volume" id="volumeTrigger"></div>
         <div id="tuningBar" class="tuning-indicator-bar" style="left: 50%;"></div>
         <div class="interactive-dial" id="dialWindow"></div>
-        <div class="interactive-tuning" id="tuningTrigger" title="Fine Tuning Knob (Drag vertically to step)"></div>
+        <div class="interactive-tuning" id="tuningTrigger"></div>
         <div class="screen-display" id="stationDisplay">RECEIVER STATUS: STANDBY — TAP HERE TO POWER ON</div>
         <div class="visualizer"><canvas id="visualizerCanvas"></canvas></div>
     </div>
@@ -71,8 +71,6 @@
         const stationDisplay = document.getElementById('stationDisplay');
         const audioEl = document.getElementById('mainAudio');
         const dialWindow = document.getElementById('dialWindow');
-        const volumeTrigger = document.getElementById('volumeTrigger');
-        const tuningTrigger = document.getElementById('tuningTrigger');
         const canvas = document.getElementById('visualizerCanvas');
         const ctx = canvas ? canvas.getContext('2d') : null;
 
@@ -80,7 +78,6 @@
         let isPowerOn = false, particles = [];
         let currentFreq = 88.0;
         let dynamicEnergy = 0;
-        let currentVolume = 0.8;
 
         const stations = {
             88.0: { name: "Pi Delta", file: "audio/absence-motive.mp3" },
@@ -101,17 +98,15 @@
             91.9: { name: "CJSW 90.9 FM / Calgary (U of C)", file: "https://cjsw.leanstream.co/CJSWFM-MP3?args=web_03", isLive: true },
             92.0: { name: "Lambda Eta", file: "audio/cinderella-shoe.mp3" },
             92.2: { name: "Echo Zeta", file: "audio/twin-sparks.mp3" },
-            92.5: { name: "Iota Xi", file: "audio/cohesion.mp3" },
-            92.7: { name: "WKRP in Cincinnati theme", file: "audio/wkrp.mp3" },
-            92.9: { name: "WKRP in Cincinnati", file: "https://ais-sa1.streamon.fm/7643_128k.mp3", isLive: true },
-            93.4: { name: "Echo Epsilon", file: "audio/ubiquity.mp3" },
-            93.7: { name: "Mu Beta", file: "audio/dancer.mp3" },
-            94.0: { name: "Duo Improbable - Eric Carmen & Céline Dion - All By Myself", file: "audio/all-by-myself.mp3" },
-            94.3: { name: "Lambda Theta", file: "audio/dynamite.mp3" },
-            94.6: { name: "Echo Eta", file: "audio/understanding.mp3" },
-            94.9: { name: "Mu", file: "audio/equanimity.mp3" },
-            95.1: { name: "Kappa Alpha", file: "audio/esprit-itinerant.mp3" },
-            95.3: { name: "Lambda Alpha", file: "audio/later.mp3" },
+            92.5: { name: "Iota Delta", file: "audio/cohesion.mp3" },
+            92.8: { name: "Echo Epsilon", file: "audio/ubiquity.mp3" },
+            93.0: { name: "Mu Beta", file: "audio/dancer.mp3" },
+            93.3: { name: "Duo Improbable - Eric Carmen & Céline Dion - All By Myself", file: "audio/all-by-myself.mp3" },
+            93.5: { name: "Lambda Theta", file: "audio/dynamite.mp3" },
+            93.8: { name: "Echo Eta", file: "audio/understanding.mp3" },
+            94.0: { name: "Mu", file: "audio/equanimity.mp3" },
+            94.5: { name: "Kappa Alpha", file: "audio/esprit-itinerant.mp3" },
+            95.0: { name: "Lambda Alpha", file: "audio/later.mp3" },
             95.5: { name: "Duo Improbable - Stewart Copeland: Police Deranged for Orchestra & Sting - King of Pain", file: "audio/king-of-pain.mp3" },
             96.0: { name: "Lambda Mu", file: "audio/father.mp3" },
             96.5: { name: "Lambda Stigma", file: "audio/grave.mp3" },
@@ -131,7 +126,7 @@
             102.5: { name: "Kappa Theta", file: "audio/quantum-touch.mp3" },
             103.0: { name: "Mu Zeta", file: "audio/quaturo.mp3" },
             103.5: { name: "Iota Eta", file: "audio/recalcitrant.mp3" },
-            104.0: { name: "Iota Rho", file: "audio/resounding.mp3" },
+            104.0: { name: "Iota Zeta", file: "audio/resounding.mp3" },
             104.3: { name: "Omega", file: "audio/estrange.mp3" },
             104.5: { name: "Lambda Xi", file: "audio/sacrifice.mp3" },
             104.7: { name: "Iota Delta", file: "audio/metallica-ballerina.mp3" },
@@ -169,7 +164,7 @@
                     analyser.fftSize = 1024; 
                     analyser.smoothingTimeConstant = 0.6;
                     gainNode = audioCtx.createGain();
-                    gainNode.gain.setValueAtTime(currentVolume, audioCtx.currentTime);
+                    gainNode.gain.setValueAtTime(0.8, audioCtx.currentTime);
 
                     if (!sourceNode) {
                         sourceNode = audioCtx.createMediaElementSource(audioEl);
@@ -216,6 +211,9 @@
                     }
 
                     if (sum === 0) {
+                        // CORS Tainted stream detected (Safari live feed block).
+                        // Drive reaction directly from audio element playback state & network progression pulses, 
+                        // ensuring the wavelength velocity responds explicitly to audio transmission parameters.
                         dynamicEnergy += (Math.random() * 0.4 - 0.2);
                         dynamicEnergy = Math.max(0.2, Math.min(1.5, dynamicEnergy));
                         
@@ -248,10 +246,7 @@
 
         function playSource(url, isLive) {
             if (!isPowerOn) return;
-            if (hls) { 
-                try { hls.destroy(); } catch(err) {}
-                hls = null; 
-            }
+            if (hls) { hls.destroy(); hls = null; }
             audioEl.pause(); 
             audioEl.src = ""; 
             audioEl.loop = !isLive;
@@ -292,16 +287,11 @@
             if (Math.abs(freq - closest) <= 0.25) {
                 const s = stations[closest];
                 stationDisplay.textContent = `[ ${s.isLive ? 'LIVE' : 'LOCKED'} ] > ${s.name} (${closest.toFixed(1)} MHz)`;
-                
-                const resolvedTarget = new URL(s.file, window.location.href).href;
-                if (audioEl.src !== resolvedTarget && !audioEl.src.endsWith(s.file)) {
+                if (audioEl.src !== s.file && (!audioEl.src.endsWith(s.file))) {
                     playSource(s.file, s.isLive);
                 }
             } else {
-                if (hls) { 
-                    try { hls.destroy(); } catch(err) {}
-                    hls = null; 
-                }
+                if (hls) { hls.destroy(); hls = null; }
                 stationDisplay.textContent = `MUTED (DEAD AIR)... [ FREQ: ${freq.toFixed(1)} MHz ]`;
                 if (!audioEl.paused) {
                     audioEl.pause();
@@ -344,7 +334,7 @@
                 powerOnReceiver();
             }
             isDragging = true;
-            try { dialWindow.setPointerCapture(e.pointerId); } catch(err) {}
+            dialWindow.setPointerCapture(e.pointerId);
             updateFromPointer(e);
         });
 
@@ -365,60 +355,6 @@
                 isDragging = false;
                 try { dialWindow.releasePointerCapture(e.pointerId); } catch(err) {}
             }
-        });
-
-        // Volume Knob Interaction Handler
-        let isVolumeDragging = false, volumeStartY = 0;
-        volumeTrigger.addEventListener('pointerdown', (e) => {
-            if (!isPowerOn) powerOnReceiver();
-            isVolumeDragging = true;
-            volumeStartY = e.clientY;
-            try { volumeTrigger.setPointerCapture(e.pointerId); } catch(err) {}
-        });
-        volumeTrigger.addEventListener('pointermove', (e) => {
-            if (!isVolumeDragging || !isPowerOn) return;
-            const deltaY = volumeStartY - e.clientY;
-            volumeStartY = e.clientY;
-            currentVolume = Math.max(0, Math.min(1, currentVolume + (deltaY * 0.01)));
-            if (gainNode && audioCtx) {
-                gainNode.gain.setValueAtTime(currentVolume, audioCtx.currentTime);
-            }
-            stationDisplay.textContent = `VOLUME: ${Math.round(currentVolume * 100)}%`;
-        });
-        ['pointerup', 'pointercancel'].forEach(ev => {
-            volumeTrigger.addEventListener(ev, (e) => {
-                if (isVolumeDragging) {
-                    isVolumeDragging = false;
-                    try { volumeTrigger.releasePointerCapture(e.pointerId); } catch(err) {}
-                    tune(currentFreq);
-                }
-            });
-        });
-
-        // Fine Tuning Knob Interaction Handler
-        let isTuningDragging = false, tuningStartY = 0;
-        tuningTrigger.addEventListener('pointerdown', (e) => {
-            if (!isPowerOn) powerOnReceiver();
-            isTuningDragging = true;
-            tuningStartY = e.clientY;
-            try { tuningTrigger.setPointerCapture(e.pointerId); } catch(err) {}
-        });
-        tuningTrigger.addEventListener('pointermove', (e) => {
-            if (!isTuningDragging || !isPowerOn) return;
-            const deltaY = tuningStartY - e.clientY;
-            if (Math.abs(deltaY) > 5) {
-                tuningStartY = e.clientY;
-                const step = deltaY > 0 ? 0.1 : -0.1;
-                tune(Math.max(88.0, Math.min(108.0, currentFreq + step)));
-            }
-        });
-        ['pointerup', 'pointercancel'].forEach(ev => {
-            tuningTrigger.addEventListener(ev, (e) => {
-                if (isTuningDragging) {
-                    isTuningDragging = false;
-                    try { tuningTrigger.releasePointerCapture(e.pointerId); } catch(err) {}
-                }
-            });
         });
     </script>
 </body>
