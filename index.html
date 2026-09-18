@@ -35,8 +35,8 @@
             background: #2b1408 url('photo/DJradioconsole-image.jpg') center/100% 100% no-repeat;
             box-shadow: 0 35px 75px rgba(0,0,0,0.95); border-radius: 12px; overflow: hidden; z-index: 2;
         }
-        .interactive-volume { position: absolute; top: 24%; left: 5.5%; width: 8%; height: 20%; cursor: pointer; border-radius: 50%; z-index: 5; }
-        .interactive-tuning { position: absolute; top: 24%; right: 5.5%; width: 8%; height: 20%; cursor: pointer; border-radius: 50%; z-index: 5; }
+        .interactive-volume { position: absolute; top: 24%; left: 5.5%; width: 8%; height: 20%; cursor: ns-resize; border-radius: 50%; z-index: 5; touch-action: none; }
+        .interactive-tuning { position: absolute; top: 24%; right: 5.5%; width: 8%; height: 20%; cursor: pointer; border-radius: 50%; z-index: 5; touch-action: none; }
         .interactive-dial { position: absolute; top: 21.5%; left: 17%; right: 17%; height: 27%; cursor: ew-resize; z-index: 5; touch-action: none; }
         .tuning-indicator-bar {
             position: absolute; top: 27.5%; height: 5.2%; width: 10px;
@@ -59,10 +59,10 @@
 </head>
 <body>
     <div class="console-container">
-        <div class="interactive-volume" id="volumeTrigger"></div>
+        <div class="interactive-volume" id="volumeTrigger" title="Volume Control (Drag Vertically)"></div>
         <div id="tuningBar" class="tuning-indicator-bar" style="left: 50%;"></div>
         <div class="interactive-dial" id="dialWindow"></div>
-        <div class="interactive-tuning" id="tuningTrigger"></div>
+        <div class="interactive-tuning" id="tuningTrigger" title="Fine Tune (+/- 0.1 MHz)"></div>
         <div class="screen-display" id="stationDisplay">RECEIVER STATUS: STANDBY — TAP HERE TO POWER ON</div>
         <div class="visualizer"><canvas id="visualizerCanvas"></canvas></div>
     </div>
@@ -72,12 +72,15 @@
         const stationDisplay = document.getElementById('stationDisplay');
         const audioEl = document.getElementById('mainAudio');
         const dialWindow = document.getElementById('dialWindow');
+        const volumeTrigger = document.getElementById('volumeTrigger');
+        const tuningTrigger = document.getElementById('tuningTrigger');
         const canvas = document.getElementById('visualizerCanvas');
         const ctx = canvas ? canvas.getContext('2d') : null;
 
         let audioCtx = null, analyser = null, sourceNode = null, gainNode = null, hls = null;
         let isPowerOn = false, particles = [];
         let currentFreq = 88.0;
+        let currentVolume = 0.8;
         let dynamicEnergy = 0;
 
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -169,7 +172,7 @@
                     analyser.fftSize = 1024; 
                     analyser.smoothingTimeConstant = 0.6;
                     gainNode = audioCtx.createGain();
-                    gainNode.gain.setValueAtTime(0.8, audioCtx.currentTime);
+                    gainNode.gain.setValueAtTime(currentVolume, audioCtx.currentTime);
 
                     if (!sourceNode) {
                         sourceNode = audioCtx.createMediaElementSource(audioEl);
@@ -298,30 +301,39 @@
             }
         }
 
+        function isCurrentSource(targetFile) {
+            try {
+                const absoluteTarget = new URL(targetFile, window.location.href).href;
+                return audioEl.src === absoluteTarget;
+            } catch {
+                return audioEl.src.endsWith(targetFile);
+            }
+        }
+
         function tune(rawFreq) {
             if (!isPowerOn) return;
             
             const freq = Math.round(rawFreq * 10) / 10;
-            currentFreq = freq;
+            currentFreq = Math.max(88.0, Math.min(108.0, freq));
             
-            const percent = 18.0 + ((freq - 88.0) / (108.0 - 88.0)) * 64.0;
+            const percent = 18.0 + ((currentFreq - 88.0) / (108.0 - 88.0)) * 64.0;
             tuningBar.style.left = `${percent}%`;
 
             const keys = Object.keys(stations).map(Number);
-            const closest = keys.reduce((p, c) => Math.abs(c - freq) < Math.abs(p - freq) ? c : p);
+            const closest = keys.reduce((p, c) => Math.abs(c - currentFreq) < Math.abs(p - currentFreq) ? c : p);
 
-            if (Math.abs(freq - closest) <= 0.25) {
+            if (Math.abs(currentFreq - closest) <= 0.25) {
                 const keyStr = closest.toFixed(1);
                 const s = stations[keyStr];
                 if (s) {
                     stationDisplay.textContent = `[ ${s.isLive ? 'LIVE' : 'LOCKED'} ] > ${s.name} (${keyStr} MHz)`;
-                    if (audioEl.src !== s.file && (!audioEl.src.endsWith(s.file))) {
+                    if (!isCurrentSource(s.file)) {
                         playSource(s.file, s.isLive);
                     }
                 }
             } else {
                 if (hls) { hls.destroy(); hls = null; }
-                stationDisplay.textContent = `MUTED (DEAD AIR)... [ FREQ: ${freq.toFixed(1)} MHz ]`;
+                stationDisplay.textContent = `MUTED (DEAD AIR)... [ FREQ: ${currentFreq.toFixed(1)} MHz ]`;
                 if (!audioEl.paused) {
                     audioEl.pause();
                     audioEl.removeAttribute('src');
@@ -359,8 +371,7 @@
 
         stationDisplay.addEventListener('pointerdown', powerOnReceiver, { passive: false });
 
-        let isDragging = false;
-
+        let isDialDragging = false;
         function updateFromPointer(e) {
             const rect = dialWindow.getBoundingClientRect();
             const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
@@ -369,34 +380,71 @@
         }
 
         dialWindow.addEventListener('pointerdown', (e) => {
-            if (!isPowerOn) {
-                powerOnReceiver(e);
-            }
-            isDragging = true;
-            try {
-                dialWindow.setPointerCapture(e.pointerId);
-            } catch (err) {}
+            if (!isPowerOn) powerOnReceiver(e);
+            isDialDragging = true;
+            try { dialWindow.setPointerCapture(e.pointerId); } catch (err) {}
             updateFromPointer(e);
         }, { passive: false });
 
         dialWindow.addEventListener('pointermove', (e) => {
-            if (!isDragging || !isPowerOn) return;
+            if (!isDialDragging || !isPowerOn) return;
             updateFromPointer(e);
         }, { passive: true });
 
         dialWindow.addEventListener('pointerup', (e) => {
-            if (isDragging) {
-                isDragging = false;
+            if (isDialDragging) {
+                isDialDragging = false;
                 try { dialWindow.releasePointerCapture(e.pointerId); } catch(err) {}
             }
         });
 
         dialWindow.addEventListener('pointercancel', (e) => {
-            if (isDragging) {
-                isDragging = false;
+            if (isDialDragging) {
+                isDialDragging = false;
                 try { dialWindow.releasePointerCapture(e.pointerId); } catch(err) {}
             }
         });
+
+        let isVolDragging = false;
+        let startY = 0;
+        let startVol = 0.8;
+
+        volumeTrigger.addEventListener('pointerdown', (e) => {
+            if (!isPowerOn) powerOnReceiver(e);
+            isVolDragging = true;
+            startY = e.clientY;
+            startVol = currentVolume;
+            try { volumeTrigger.setPointerCapture(e.pointerId); } catch(err) {}
+            e.preventDefault();
+        }, { passive: false });
+
+        volumeTrigger.addEventListener('pointermove', (e) => {
+            if (!isVolDragging || !gainNode || !audioCtx) return;
+            const deltaY = startY - e.clientY;
+            currentVolume = Math.max(0, Math.min(1, startVol + (deltaY / 150)));
+            gainNode.gain.setValueAtTime(currentVolume, audioCtx.currentTime);
+            stationDisplay.textContent = `VOLUME: ${Math.round(currentVolume * 100)}%`;
+        }, { passive: true });
+
+        volumeTrigger.addEventListener('pointerup', (e) => {
+            if (isVolDragging) {
+                isVolDragging = false;
+                try { volumeTrigger.releasePointerCapture(e.pointerId); } catch(err) {}
+                tune(currentFreq);
+            }
+        });
+
+        tuningTrigger.addEventListener('pointerdown', (e) => {
+            if (!isPowerOn) {
+                powerOnReceiver(e);
+                return;
+            }
+            const rect = tuningTrigger.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const step = clickX < (rect.width / 2) ? -0.1 : 0.1;
+            tune(currentFreq + step);
+            e.preventDefault();
+        }, { passive: false });
     </script>
 </body>
 </html>
