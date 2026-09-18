@@ -255,6 +255,7 @@
             if (hls) { hls.destroy(); hls = null; }
             
             audioEl.pause();
+            audioEl.currentTime = 0;
             audioEl.removeAttribute('src');
             audioEl.load();
             audioEl.loop = !isLive;
@@ -298,7 +299,14 @@
             } else {
                 audioEl.src = url;
                 audioEl.load();
-                audioEl.play().catch(err => console.warn("Standard audio constraint catch:", err));
+                audioEl.play().catch(err => {
+                    console.warn("Audio playback interrupted or failed for:", url, err);
+                    setTimeout(() => {
+                        if (isPowerOn && isCurrentSource(url)) {
+                            audioEl.play().catch(e => console.warn("Retry failed:", e));
+                        }
+                    }, 250);
+                });
             }
         }
 
@@ -320,13 +328,14 @@
             const keys = Object.keys(stations).map(Number);
             const closest = keys.reduce((p, c) => Math.abs(c - currentFreq) < Math.abs(p - currentFreq) ? c : p);
 
-            // Magnetic snap when within 0.12 MHz of a defined station
-            const targetFreq = Math.abs(currentFreq - closest) <= 0.12 ? closest : currentFreq;
+            // Strict magnetic snap: only snap if within 0.05 MHz of a defined station (prevents dead air locking like 88.8)
+            const isNearStation = Math.abs(currentFreq - closest) <= 0.05;
+            const targetFreq = isNearStation ? closest : currentFreq;
             
             const percent = 18.0 + ((targetFreq - 88.0) / (108.0 - 88.0)) * 64.0;
             tuningBar.style.left = `${percent}%`;
 
-            if (Math.abs(currentFreq - closest) <= 0.12) {
+            if (isNearStation) {
                 const keyStr = closest.toFixed(1);
                 const s = stations[keyStr];
                 if (s) {
