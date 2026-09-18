@@ -25,7 +25,6 @@
             color: #d8c2a8; font-family: system-ui, -apple-system, sans-serif;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             min-height: 100vh; min-height: 100dvh; padding: 20px; user-select: none;
-            -webkit-touch-callout: none; -webkit-user-select: none;
         }
         body::before {
             content: ''; position: fixed; inset: 0; background: rgba(11, 6, 4, 0.75); pointer-events: none; z-index: 1;
@@ -35,14 +34,14 @@
             background: #2b1408 url('photo/DJradioconsole-image.jpg') center/100% 100% no-repeat;
             box-shadow: 0 35px 75px rgba(0,0,0,0.95); border-radius: 12px; overflow: hidden; z-index: 2;
         }
-        .interactive-volume { position: absolute; top: 24%; left: 5.5%; width: 8%; height: 20%; cursor: ns-resize; border-radius: 50%; z-index: 5; touch-action: none; }
-        .interactive-tuning { position: absolute; top: 24%; right: 5.5%; width: 8%; height: 20%; cursor: pointer; border-radius: 50%; z-index: 5; touch-action: none; }
+        .interactive-volume { position: absolute; top: 24%; left: 5.5%; width: 8%; height: 20%; cursor: pointer; border-radius: 50%; z-index: 5; }
+        .interactive-tuning { position: absolute; top: 24%; right: 5.5%; width: 8%; height: 20%; cursor: pointer; border-radius: 50%; z-index: 5; }
         .interactive-dial { position: absolute; top: 21.5%; left: 17%; right: 17%; height: 27%; cursor: ew-resize; z-index: 5; touch-action: none; }
         .tuning-indicator-bar {
             position: absolute; top: 27.5%; height: 5.2%; width: 10px;
             background: linear-gradient(to bottom, rgba(255,150,0,0.6), #ffe885 50%, rgba(255,150,0,0.6));
             border-radius: 2px; box-shadow: 0 0 10px 2px var(--amber-glow), inset 0 0 3px #fff;
-            transform: translateX(-50%); pointer-events: none; transition: left 0.1s cubic-bezier(0.1, 1, 0.1, 1); z-index: 3;
+            transform: translateX(-50%); pointer-events: none; transition: left 0.15s cubic-bezier(0.1, 1, 0.1, 1); z-index: 3;
         }
         .screen-display {
             position: absolute; top: 56.5%; left: 27%; right: 27%; height: 8.5%;
@@ -59,92 +58,85 @@
 </head>
 <body>
     <div class="console-container">
-        <div class="interactive-volume" id="volumeTrigger" title="Volume Control (Drag Vertically)"></div>
+        <div class="interactive-volume" id="volumeTrigger"></div>
         <div id="tuningBar" class="tuning-indicator-bar" style="left: 50%;"></div>
         <div class="interactive-dial" id="dialWindow"></div>
-        <div class="interactive-tuning" id="tuningTrigger" title="Fine Tune (+/- 0.1 MHz)"></div>
+        <div class="interactive-tuning" id="tuningTrigger"></div>
         <div class="screen-display" id="stationDisplay">RECEIVER STATUS: STANDBY — TAP HERE TO POWER ON</div>
         <div class="visualizer"><canvas id="visualizerCanvas"></canvas></div>
     </div>
-    <audio id="mainAudio" preload="auto" crossorigin="anonymous" playsinline webkit-playsinline></audio>
+    <audio id="mainAudio" preload="auto" crossorigin="anonymous" playsinline></audio>
     <script>
         const tuningBar = document.getElementById('tuningBar');
         const stationDisplay = document.getElementById('stationDisplay');
         const audioEl = document.getElementById('mainAudio');
         const dialWindow = document.getElementById('dialWindow');
-        const volumeTrigger = document.getElementById('volumeTrigger');
-        const tuningTrigger = document.getElementById('tuningTrigger');
         const canvas = document.getElementById('visualizerCanvas');
         const ctx = canvas ? canvas.getContext('2d') : null;
 
         let audioCtx = null, analyser = null, sourceNode = null, gainNode = null, hls = null;
         let isPowerOn = false, particles = [];
         let currentFreq = 88.0;
-        let currentVolume = 0.8;
         let dynamicEnergy = 0;
 
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
         const stations = {
-            "88.0": { name: "Pi Delta", file: "audio/absence-motive.mp3" },
-            "88.3": { name: "ICI Première / Montréal", file: "https://rcavliveaudio.akamaized.net/hls/live/2006635/P-2QMTL0_MTL/master.m3u8", isLive: true },
-            "88.6": { name: "Duo Improbable - Trent Reznor & Johnny Cash - Hurt", file: "audio/trent-reznor-johnny-cash-hurt.mp3" },
-            "89.0": { name: "Echo Delta", file: "audio/arise.mp3" },
-            "89.3": { name: "WKRP in Cincinnati Theme", file: "audio/wkrp.mp3" },
-            "89.6": { name: "WKRP in Cincinnati", file: "https://ais-sa1.streamon.fm/7643_128k.mp3", isLive: true },
-            "89.9": { name: "Echo Gamma", file: "audio/bang.mp3" },
-            "90.2": { name: "CIUT 89.5 FM / Toronto (U of T)", file: "https://ice23.securenetsystems.net/CIUT", isLive: true },
-            "90.5": { name: "Echo Beta", file: "audio/eveille.mp3" },
-            "90.8": { name: "Kappa Zeta", file: "audio/automatism.mp3" },
-            "91.1": { name: "CKUT 90.3 FM / Montréal (McGill)", file: "https://ckut.out.airtime.pro/ckut_a", isLive: true },
-            "91.4": { name: "Echo Alpha", file: "audio/lite.mp3" },
-            "91.7": { name: "Mu Delta", file: "audio/bliss.mp3" },
-            "92.0": { name: "Echo Theta", file: "audio/there.mp3" },
-            "92.3": { name: "Sessions", file: "audio/jam-sessions.mp3" },
-            "92.6": { name: "Lambda Delta", file: "audio/chase.mp3" },
-            "92.9": { name: "CJSW 90.9 FM / Calgary (U of C)", file: "https://cjsw.leanstream.co/CJSWFM-MP3?args=web_03", isLive: true },
-            "93.2": { name: "Lambda Eta", file: "audio/cinderella-shoe.mp3" },
-            "93.5": { name: "Echo Zeta", file: "audio/twin-sparks.mp3" },
-            "93.8": { name: "Iota Alpha", file: "audio/always.mp3" },
-            "94.1": { name: "Iota Delta", file: "audio/cohesion.mp3" },
-            "94.4": { name: "Echo Epsilon", file: "audio/ubiquity.mp3" },
-            "94.7": { name: "Mu Beta", file: "audio/dancer.mp3" },
-            "95.0": { name: "Duo Improbable - Eric Carmen & Céline Dion - All By Myself", file: "audio/all-by-myself.mp3" },
-            "95.3": { name: "Lambda Theta", file: "audio/dynamite.mp3" },
-            "95.6": { name: "Echo Eta", file: "audio/understanding.mp3" },
-            "95.9": { name: "Mu", file: "audio/equanimity.mp3" },
-            "96.2": { name: "Kappa Alpha", file: "audio/esprit-itinerant.mp3" },
-            "96.5": { name: "Lambda Alpha", file: "audio/later.mp3" },
-            "96.8": { name: "Duo Improbable - Stewart Copeland: Police Deranged for Orchestra & Sting - King of Pain", file: "audio/king-of-pain.mp3" },
-            "97.1": { name: "Lambda Mu", file: "audio/father.mp3" },
-            "97.4": { name: "Lambda Stigma", file: "audio/grave.mp3" },
-            "97.7": { name: "Kappa Eta", file: "audio/inversion.mp3" },
-            "98.0": { name: "Mu Alpha", file: "audio/lucioles.mp3" },
-            "98.3": { name: "Sud Radio en ligne", file: "https://start-sud.ice.infomaniak.ch/start-sud-high.mp3", isLive: true },
-            "98.6": { name: "Kappa Gamma", file: "audio/mass-effect.mp3" },
-            "98.9": { name: "ICI Musique Classique", file: "https://rcavliveaudio.akamaized.net/hls/live/2007000/MUSE/master.m3u8", isLive: true },
-            "99.2": { name: "Iota Stigma", file: "audio/melancoly-in-flat.mp3" },
-            "99.5": { name: "Mu Epsilon", file: "audio/monster.mp3" },
-            "99.8": { name: "Iota Epsilon", file: "audio/narc-osis.mp3" },
-            "100.1": { name: "Lambda Nu", file: "audio/next-flight-home.mp3" },
-            "100.4": { name: "Lambda", file: "audio/oticons.mp3" },
-            "100.7": { name: "Lambda Gamma", file: "audio/pacis.mp3" },
-            "101.0": { name: "Duo Improbable - Donna Summer & Clara Luciani - I Feel Love ~ C'est L'Amour", file: "audio/i-feel-love-donna-summer.mp3" },
-            "101.3": { name: "Iota Zeta", file: "audio/push.mp3" },
-            "101.6": { name: "Kappa Theta", file: "audio/quantum-touch.mp3" },
-            "101.9": { name: "Mu Zeta", file: "audio/quaturo.mp3" },
-            "102.2": { name: "Iota Eta", file: "audio/recalcitrant.mp3" },
-            "102.5": { name: "Iota Zeta", file: "audio/resounding.mp3" },
-            "102.8": { name: "Omega", file: "audio/estrange.mp3" },
-            "103.1": { name: "Lambda Xi", file: "audio/sacrifice.mp3" },
-            "103.4": { name: "Iota Delta", file: "audio/metallica-ballerina.mp3" },
-            "103.7": { name: "Iota", file: "audio/slow-think.mp3" },
-            "104.0": { name: "Kappa Iota", file: "audio/across-bourbon-street.mp3" },
-            "104.3": { name: "Kappa Delta", file: "audio/spectrum.mp3" },
-            "104.6": { name: "Lambda Zeta", file: "audio/stubborness.mp3" },
-            "104.9": { name: "Mu Theta", file: "audio/tangerine.mp3" },
-            "105.2": { name: "Kappa Beta", file: "audio/the-daunting.mp3" },
-            "105.5": { name: "ICI Première / Ottawa", file: "https://rcavliveaudio.akamaized.net/hls/live/2006986/M-7OOTT0_OTT/master.m3u8", isLive: true }
+            88.0: { name: "Pi Delta", file: "audio/absence-motive.mp3" },
+            88.3: { name: "ICI Première / Montréal", file: "https://rcavliveaudio.akamaized.net/hls/live/2006635/P-2QMTL0_MTL/master.m3u8", isLive: true },
+            88.5: { name: "Duo Improbable - Trent Reznor & Johnny Cash - Hurt", file: "audio/trent-reznor-johnny-cash-hurt.mp3" },
+            88.8: { name: "Echo Delta", file: "audio/arise.mp3" },
+            89.0: { name: "Iota Alpha", file: "audio/always.mp3" },
+            89.3: { name: "Echo Gamma", file: "audio/bang.mp3" },
+            89.5: { name: "CIUT 89.5 FM / Toronto (U of T)", file: "https://ice23.securenetsystems.net/CIUT", isLive: true },
+            89.8: { name: "Echo Beta", file: "audio/eveille.mp3" },
+            90.0: { name: "Kappa Zeta", file: "audio/automatism.mp3" },
+            90.3: { name: "CKUT 90.3 FM / Montréal (McGill)", file: "https://ckut.out.airtime.pro/ckut_a", isLive: true },
+            90.7: { name: "Echo Alpha", file: "audio/lite.mp3" },
+            91.0: { name: "Mu Delta", file: "audio/bliss.mp3" },
+            91.2: { name: "Echo Theta", file: "audio/there.mp3" },
+            91.5: { name: "Sessions", file: "audio/jam-sessions.mp3" },
+            91.7: { name: "Lambda Delta", file: "audio/chase.mp3" },
+            91.9: { name: "CJSW 90.9 FM / Calgary (U of C)", file: "https://cjsw.leanstream.co/CJSWFM-MP3?args=web_03", isLive: true },
+            92.0: { name: "Lambda Eta", file: "audio/cinderella-shoe.mp3" },
+            92.2: { name: "Echo Zeta", file: "audio/twin-sparks.mp3" },
+            92.5: { name: "Iota Delta", file: "audio/cohesion.mp3" },
+            92.8: { name: "Echo Epsilon", file: "audio/ubiquity.mp3" },
+            93.0: { name: "Mu Beta", file: "audio/dancer.mp3" },
+            93.3: { name: "Duo Improbable - Eric Carmen & Céline Dion - All By Myself", file: "audio/all-by-myself.mp3" },
+            93.5: { name: "Lambda Theta", file: "audio/dynamite.mp3" },
+            93.8: { name: "Echo Eta", file: "audio/understanding.mp3" },
+            94.0: { name: "Mu", file: "audio/equanimity.mp3" },
+            94.5: { name: "Kappa Alpha", file: "audio/esprit-itinerant.mp3" },
+            95.0: { name: "Lambda Alpha", file: "audio/later.mp3" },
+            95.5: { name: "Duo Improbable - Stewart Copeland: Police Deranged for Orchestra & Sting - King of Pain", file: "audio/king-of-pain.mp3" },
+            96.0: { name: "Lambda Mu", file: "audio/father.mp3" },
+            96.5: { name: "Lambda Stigma", file: "audio/grave.mp3" },
+            97.0: { name: "Kappa Eta", file: "audio/inversion.mp3" },
+            97.5: { name: "Mu Alpha", file: "audio/lucioles.mp3" },
+            97.8: { name: "Sud Radio en ligne", file: "https://start-sud.ice.infomaniak.ch/start-sud-high.mp3", isLive: true },
+            98.0: { name: "Kappa Gamma", file: "audio/mass-effect.mp3" },
+            98.5: { name: "ICI Musique Classique", file: "https://rcavliveaudio.akamaized.net/hls/live/2007000/MUSE/master.m3u8", isLive: true },
+            99.0: { name: "Iota Stigma", file: "audio/melancoly-in-flat.mp3" },
+            99.5: { name: "Mu Epsilon", file: "audio/monster.mp3" },
+            100.0: { name: "Iota Epsilon", file: "audio/narc-osis.mp3" },
+            100.5: { name: "Lambda Nu", file: "audio/next-flight-home.mp3" },
+            101.0: { name: "Lambda", file: "audio/oticons.mp3" },
+            101.5: { name: "Lambda Gamma", file: "audio/pacis.mp3" },
+            101.7: { name: "Duo Improbable - Donna Summer & Clara Luciani - I Feel Love ~ C'est L'Amour", file: "audio/i-feel-love-donna-summer.mp3" },
+            102.0: { name: "Iota Zeta", file: "audio/push.mp3" },
+            102.5: { name: "Kappa Theta", file: "audio/quantum-touch.mp3" },
+            103.0: { name: "Mu Zeta", file: "audio/quaturo.mp3" },
+            103.5: { name: "Iota Eta", file: "audio/recalcitrant.mp3" },
+            104.0: { name: "Iota Zeta", file: "audio/resounding.mp3" },
+            104.3: { name: "Omega", file: "audio/estrange.mp3" },
+            104.5: { name: "Lambda Xi", file: "audio/sacrifice.mp3" },
+            104.7: { name: "Iota Delta", file: "audio/metallica-ballerina.mp3" },
+            105.0: { name: "Iota", file: "audio/slow-think.mp3" },
+            105.5: { name: "Kappa Iota", file: "audio/across-bourbon-street.mp3" },
+            106.0: { name: "Kappa Delta", file: "audio/spectrum.mp3" },
+            106.5: { name: "Lambda Zeta", file: "audio/stubborness.mp3" },
+            107.0: { name: "Mu Theta", file: "audio/tangerine.mp3" },
+            107.5: { name: "Kappa Beta", file: "audio/the-daunting.mp3" },
+            108.0: { name: "ICI Première / Ottawa", file: "https://rcavliveaudio.akamaized.net/hls/live/2006986/M-7OOTT0_OTT/master.m3u8", isLive: true }
         };
 
         function initParticles(w, h) {
@@ -167,13 +159,12 @@
         function initAudio() {
             if (!audioCtx) {
                 try {
-                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-                    audioCtx = new AudioContextClass();
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                     analyser = audioCtx.createAnalyser();
                     analyser.fftSize = 1024; 
                     analyser.smoothingTimeConstant = 0.6;
                     gainNode = audioCtx.createGain();
-                    gainNode.gain.setValueAtTime(currentVolume, audioCtx.currentTime);
+                    gainNode.gain.setValueAtTime(0.8, audioCtx.currentTime);
 
                     if (!sourceNode) {
                         sourceNode = audioCtx.createMediaElementSource(audioEl);
@@ -220,6 +211,9 @@
                     }
 
                     if (sum === 0) {
+                        // CORS Tainted stream detected (Safari live feed block).
+                        // Drive reaction directly from audio element playback state & network progression pulses, 
+                        // ensuring the wavelength velocity responds explicitly to audio transmission parameters.
                         dynamicEnergy += (Math.random() * 0.4 - 0.2);
                         dynamicEnergy = Math.max(0.2, Math.min(1.5, dynamicEnergy));
                         
@@ -253,11 +247,8 @@
         function playSource(url, isLive) {
             if (!isPowerOn) return;
             if (hls) { hls.destroy(); hls = null; }
-            
-            audioEl.pause();
-            audioEl.currentTime = 0;
-            audioEl.removeAttribute('src');
-            audioEl.load();
+            audioEl.pause(); 
+            audioEl.src = ""; 
             audioEl.loop = !isLive;
 
             if (audioCtx && audioCtx.state === 'suspended') {
@@ -265,199 +256,106 @@
             }
 
             if (isLive && url.endsWith('.m3u8')) {
-                if (isIOS || audioEl.canPlayType('application/vnd.apple.mpegurl')) {
-                    audioEl.src = url;
-                    audioEl.load();
-                    audioEl.play().catch(err => console.warn("iOS Native HLS constraint catch:", err));
-                } else if (Hls.isSupported()) {
-                    hls = new Hls({
-                        xhrSetup: function(xhr, url) {
-                            xhr.withCredentials = false;
-                        }
-                    });
-                    hls.loadSource(url);
+                if (Hls.isSupported()) {
+                    hls = new Hls(); 
+                    hls.loadSource(url); 
                     hls.attachMedia(audioEl);
                     hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                        audioEl.play().catch(err => console.warn("HLS.js play constraint catch:", err));
+                        audioEl.play().catch(err => console.warn("HLS Play block:", err));
                     });
-                    hls.on(Hls.Events.ERROR, function(event, data) {
-                        if (data.fatal) {
-                            switch(data.type) {
-                                case Hls.ErrorTypes.NETWORK_ERROR:
-                                    hls.startLoad();
-                                    break;
-                                case Hls.ErrorTypes.MEDIA_ERROR:
-                                    hls.recoverMediaError();
-                                    break;
-                                default:
-                                    hls.destroy();
-                                    break;
-                            }
-                        }
-                    });
+                } else if (audioEl.canPlayType('application/vnd.apple.mpegurl')) {
+                    audioEl.src = url; 
+                    audioEl.load(); 
+                    audioEl.play().catch(err => console.warn("Native HLS Play block:", err));
                 }
             } else {
-                audioEl.src = url;
-                audioEl.load();
-                audioEl.play().catch(err => {
-                    console.warn("Audio playback interrupted or failed for:", url, err);
-                    setTimeout(() => {
-                        if (isPowerOn && isCurrentSource(url)) {
-                            audioEl.play().catch(e => console.warn("Retry failed:", e));
-                        }
-                    }, 250);
-                });
+                audioEl.src = url; 
+                audioEl.load(); 
+                audioEl.play().catch(err => console.warn("MP3 Play block:", err));
             }
         }
 
-        function isCurrentSource(targetFile) {
-            try {
-                const absoluteTarget = new URL(targetFile, window.location.href).href;
-                return audioEl.src === absoluteTarget;
-            } catch {
-                return audioEl.src.endsWith(targetFile);
-            }
-        }
-
-        function tune(rawFreq) {
+        function tune(freq) {
             if (!isPowerOn) return;
-            
-            const freq = Math.round(rawFreq * 10) / 10;
-            currentFreq = Math.max(88.0, Math.min(108.0, freq));
-
-            const keys = Object.keys(stations).map(Number);
-            const closest = keys.reduce((p, c) => Math.abs(c - currentFreq) < Math.abs(p - currentFreq) ? c : p);
-
-            // Strict magnetic snap: only snap if within 0.05 MHz of a defined station (prevents dead air locking like 88.8)
-            const isNearStation = Math.abs(currentFreq - closest) <= 0.05;
-            const targetFreq = isNearStation ? closest : currentFreq;
-            
-            const percent = 18.0 + ((targetFreq - 88.0) / (108.0 - 88.0)) * 64.0;
+            currentFreq = freq;
+            const percent = 18.0 + ((freq - 88.0) / (108.0 - 88.0)) * 64.0;
             tuningBar.style.left = `${percent}%`;
 
-            if (isNearStation) {
-                const keyStr = closest.toFixed(1);
-                const s = stations[keyStr];
-                if (s) {
-                    stationDisplay.textContent = `[ ${s.isLive ? 'LIVE' : 'LOCKED'} ] > ${s.name} (${keyStr} MHz)`;
-                    if (!isCurrentSource(s.file)) {
-                        playSource(s.file, s.isLive);
-                    }
+            const keys = Object.keys(stations).map(Number);
+            const closest = keys.reduce((p, c) => Math.abs(c - freq) < Math.abs(p - freq) ? c : p);
+
+            if (Math.abs(freq - closest) <= 0.25) {
+                const s = stations[closest];
+                stationDisplay.textContent = `[ ${s.isLive ? 'LIVE' : 'LOCKED'} ] > ${s.name} (${closest.toFixed(1)} MHz)`;
+                if (audioEl.src !== s.file && (!audioEl.src.endsWith(s.file))) {
+                    playSource(s.file, s.isLive);
                 }
             } else {
                 if (hls) { hls.destroy(); hls = null; }
-                stationDisplay.textContent = `MUTED (DEAD AIR)... [ FREQ: ${currentFreq.toFixed(1)} MHz ]`;
+                stationDisplay.textContent = `MUTED (DEAD AIR)... [ FREQ: ${freq.toFixed(1)} MHz ]`;
                 if (!audioEl.paused) {
                     audioEl.pause();
-                    audioEl.removeAttribute('src');
-                    audioEl.load();
+                    audioEl.src = "";
                 }
             }
         }
 
-        function powerOnReceiver(e) {
+        function powerOnReceiver() {
             if (isPowerOn) return;
-            if (e) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-
-            audioEl.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+            initAudio();
+            isPowerOn = true;
+            
+            const s = stations[88.0];
+            audioEl.src = s.file;
             audioEl.play().then(() => {
-                audioEl.pause();
-                audioEl.removeAttribute('src');
-                audioEl.load();
-                
-                initAudio();
-                if (audioCtx && audioCtx.state === 'suspended') {
-                    audioCtx.resume();
-                }
-                isPowerOn = true;
                 tune(currentFreq);
             }).catch(err => {
-                console.warn("Primary iOS activation safety fallback invoked:", err);
-                initAudio();
-                isPowerOn = true;
+                console.warn("Power prime action intercepted:", err);
                 tune(currentFreq);
             });
         }
 
-        stationDisplay.addEventListener('pointerdown', powerOnReceiver, { passive: false });
+        stationDisplay.addEventListener('click', () => {
+            if (!isPowerOn) {
+                powerOnReceiver();
+            }
+        });
 
-        let isDialDragging = false;
+        let isDragging = false;
+
         function updateFromPointer(e) {
             const rect = dialWindow.getBoundingClientRect();
             const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-            const quantizedFreq = Math.round((88.0 + (ratio * 20.0)) * 10) / 10;
-            tune(quantizedFreq);
+            tune(88.0 + (ratio * 20.0));
         }
 
         dialWindow.addEventListener('pointerdown', (e) => {
-            if (!isPowerOn) powerOnReceiver(e);
-            isDialDragging = true;
-            try { dialWindow.setPointerCapture(e.pointerId); } catch (err) {}
+            if (!isPowerOn) {
+                powerOnReceiver();
+            }
+            isDragging = true;
+            dialWindow.setPointerCapture(e.pointerId);
             updateFromPointer(e);
-        }, { passive: false });
+        });
 
         dialWindow.addEventListener('pointermove', (e) => {
-            if (!isDialDragging || !isPowerOn) return;
+            if (!isDragging || !isPowerOn) return;
             updateFromPointer(e);
-        }, { passive: true });
+        });
 
         dialWindow.addEventListener('pointerup', (e) => {
-            if (isDialDragging) {
-                isDialDragging = false;
+            if (isDragging) {
+                isDragging = false;
                 try { dialWindow.releasePointerCapture(e.pointerId); } catch(err) {}
             }
         });
 
         dialWindow.addEventListener('pointercancel', (e) => {
-            if (isDialDragging) {
-                isDialDragging = false;
+            if (isDragging) {
+                isDragging = false;
                 try { dialWindow.releasePointerCapture(e.pointerId); } catch(err) {}
             }
         });
-
-        let isVolDragging = false;
-        let startY = 0;
-        let startVol = 0.8;
-
-        volumeTrigger.addEventListener('pointerdown', (e) => {
-            if (!isPowerOn) powerOnReceiver(e);
-            isVolDragging = true;
-            startY = e.clientY;
-            startVol = currentVolume;
-            try { volumeTrigger.setPointerCapture(e.pointerId); } catch(err) {}
-            e.preventDefault();
-        }, { passive: false });
-
-        volumeTrigger.addEventListener('pointermove', (e) => {
-            if (!isVolDragging || !gainNode || !audioCtx) return;
-            const deltaY = startY - e.clientY;
-            currentVolume = Math.max(0, Math.min(1, startVol + (deltaY / 150)));
-            gainNode.gain.setValueAtTime(currentVolume, audioCtx.currentTime);
-            stationDisplay.textContent = `VOLUME: ${Math.round(currentVolume * 100)}%`;
-        }, { passive: true });
-
-        volumeTrigger.addEventListener('pointerup', (e) => {
-            if (isVolDragging) {
-                isVolDragging = false;
-                try { volumeTrigger.releasePointerCapture(e.pointerId); } catch(err) {}
-                tune(currentFreq);
-            }
-        });
-
-        tuningTrigger.addEventListener('pointerdown', (e) => {
-            if (!isPowerOn) {
-                powerOnReceiver(e);
-                return;
-            }
-            const rect = tuningTrigger.getBoundingClientRect();
-            const clickX = e.clientX - rect.left;
-            const step = clickX < (rect.width / 2) ? -0.1 : 0.1;
-            tune(currentFreq + step);
-            e.preventDefault();
-        }, { passive: false });
     </script>
 </body>
 </html>
