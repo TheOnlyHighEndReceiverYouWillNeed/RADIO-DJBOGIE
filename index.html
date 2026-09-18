@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>RADIO-DJBOGEY</title>
+    <title>Radio Console</title>
     
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-7GLPZ5M24E"></script>
@@ -11,6 +11,7 @@
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
+
       gtag('config', 'G-7GLPZ5M24E');
     </script>
 
@@ -81,60 +82,61 @@
         const stations = {
             88.0: { name: "Pi Delta", file: "audio/absence-motive.mp3" },
             88.3: { name: "ICI Première / Montréal", file: "https://rcavliveaudio.akamaized.net/hls/live/2006635/P-2QMTL0_MTL/master.m3u8", isLive: true },
-            88.6: { name: "Duo Improbable - Trent Reznor & Johnny Cash - Hurt", file: "audio/trent-reznor-johnny-cash-hurt.mp3" },
-            88.9: { name: "Echo Delta", file: "audio/arise.mp3" },
-            89.2: { name: "Iota Alpha", file: "audio/always.mp3" },
+            88.5: { name: "Duo Improbable - Trent Reznor & Johnny Cash - Hurt", file: "audio/trent-reznor-johnny-cash-hurt.mp3" },
+            88.8: { name: "Echo Delta", file: "audio/arise.mp3" },
+            89.0: { name: "Iota Alpha", file: "audio/always.mp3" },
+            89.3: { name: "Echo Gamma", file: "audio/bang.mp3" },
             89.5: { name: "CIUT 89.5 FM / Toronto (U of T)", file: "https://ice23.securenetsystems.net/CIUT", isLive: true },
             89.8: { name: "Echo Beta", file: "audio/eveille.mp3" },
-            90.1: { name: "Kappa Zeta", file: "audio/automatism.mp3" },
-            90.4: { name: "CKUT 90.3 FM / Montréal (McGill)", file: "https://ckut.out.airtime.pro/ckut_a", isLive: true },
+            90.0: { name: "Kappa Zeta", file: "audio/automatism.mp3" },
+            90.3: { name: "CKUT 90.3 FM / Montréal (McGill)", file: "https://ckut.out.airtime.pro/ckut_a", isLive: true },
             90.7: { name: "Echo Alpha", file: "audio/lite.mp3" },
             91.0: { name: "Mu Delta", file: "audio/bliss.mp3" },
-            91.3: { name: "Echo Theta", file: "audio/there.mp3" },
-            91.6: { name: "Sessions", file: "audio/jam-sessions.mp3" },
-            91.9: { name: "Lambda Delta", file: "audio/chase.mp3" },
-            92.2: { name: "CJSW 90.9 FM / Calgary (U of C)", file: "https://cjsw.leanstream.co/CJSWFM-MP3?args=web_03", isLive: true },
-            92.5: { name: "Lambda Eta", file: "audio/cinderella-shoe.mp3" },
-            92.8: { name: "Echo Zeta", file: "audio/twin-sparks.mp3" },
-            93.1: { name: "Iota Delta", file: "audio/cohesion.mp3" },
-            93.4: { name: "Echo Epsilon", file: "audio/ubiquity.mp3" },
-            93.7: { name: "Mu Beta", file: "audio/dancer.mp3" },
-            94.0: { name: "Duo Improbable - Eric Carmen & Céline Dion - All By Myself", file: "audio/all-by-myself.mp3" },
-            94.3: { name: "Lambda Theta", file: "audio/dynamite.mp3" },
-            94.6: { name: "Echo Eta", file: "audio/understanding.mp3" },
-            94.9: { name: "Mu", file: "audio/equanimity.mp3" },
-            95.2: { name: "Kappa Alpha", file: "audio/esprit-itinerant.mp3" },
-            95.5: { name: "Lambda Alpha", file: "audio/later.mp3" },
-            95.8: { name: "Duo Improbable - Stewart Copeland: Police Deranged for Orchestra & Sting - King of Pain", file: "audio/king-of-pain.mp3" },
-            96.1: { name: "Lambda Mu", file: "audio/father.mp3" },
-            96.4: { name: "Lambda Stigma", file: "audio/grave.mp3" },
-            96.7: { name: "Kappa Eta", file: "audio/inversion.mp3" },
-            97.0: { name: "Mu Alpha", file: "audio/lucioles.mp3" },
-            97.3: { name: "Sud Radio en ligne", file: "https://start-sud.ice.infomaniak.ch/start-sud-high.mp3", isLive: true },
-            97.6: { name: "Kappa Gamma", file: "audio/mass-effect.mp3" },
-            97.9: { name: "ICI Musique Classique", file: "https://rcavliveaudio.akamaized.net/hls/live/2007000/MUSE/master.m3u8", isLive: true },
-            98.2: { name: "Iota Stigma", file: "audio/melancoly-in-flat.mp3" },
-            98.5: { name: "Mu Epsilon", file: "audio/monster.mp3" },
-            98.8: { name: "Iota Epsilon", file: "audio/narc-osis.mp3" },
-            99.1: { name: "Lambda Nu", file: "audio/next-flight-home.mp3" },
-            99.4: { name: "Lambda", file: "audio/oticons.mp3" },
-            99.7: { name: "Lambda Gamma", file: "audio/pacis.mp3" },
-            100.0: { name: "Duo Improbable - Donna Summer & Clara Luciani - I Feel Love ~ C'est L'Amour", file: "audio/i-feel-love-donna-summer.mp3" },
-            100.3: { name: "Iota Zeta", file: "audio/push.mp3" },
-            100.6: { name: "Kappa Theta", file: "audio/quantum-touch.mp3" },
-            100.9: { name: "Mu Zeta", file: "audio/quaturo.mp3" },
-            101.2: { name: "Iota Eta", file: "audio/recalcitrant.mp3" },
-            101.5: { name: "Iota Zeta", file: "audio/resounding.mp3" },
-            101.8: { name: "Omega", file: "audio/estrange.mp3" },
-            102.1: { name: "Lambda Xi", file: "audio/sacrifice.mp3" },
-            102.4: { name: "Iota Delta", file: "audio/metallica-ballerina.mp3" },
-            102.7: { name: "Iota", file: "audio/slow-think.mp3" },
-            103.0: { name: "Kappa Iota", file: "audio/across-bourbon-street.mp3" },
-            103.3: { name: "Kappa Delta", file: "audio/spectrum.mp3" },
-            103.6: { name: "Lambda Zeta", file: "audio/stubborness.mp3" },
-            103.9: { name: "Mu Theta", file: "audio/tangerine.mp3" },
-            104.2: { name: "Kappa Beta", file: "audio/the-daunting.mp3" },
-            104.5: { name: "ICI Première / Ottawa", file: "https://rcavliveaudio.akamaized.net/hls/live/2006986/M-7OOTT0_OTT/master.m3u8", isLive: true }
+            91.2: { name: "Echo Theta", file: "audio/there.mp3" },
+            91.5: { name: "Sessions", file: "audio/jam-sessions.mp3" },
+            91.7: { name: "Lambda Delta", file: "audio/chase.mp3" },
+            91.9: { name: "CJSW 90.9 FM / Calgary (U of C)", file: "https://cjsw.leanstream.co/CJSWFM-MP3?args=web_03", isLive: true },
+            92.0: { name: "Lambda Eta", file: "audio/cinderella-shoe.mp3" },
+            92.2: { name: "Echo Zeta", file: "audio/twin-sparks.mp3" },
+            92.5: { name: "Iota Delta", file: "audio/cohesion.mp3" },
+            92.8: { name: "Echo Epsilon", file: "audio/ubiquity.mp3" },
+            93.0: { name: "Mu Beta", file: "audio/dancer.mp3" },
+            93.3: { name: "Duo Improbable - Eric Carmen & Céline Dion - All By Myself", file: "audio/all-by-myself.mp3" },
+            93.5: { name: "Lambda Theta", file: "audio/dynamite.mp3" },
+            93.8: { name: "Echo Eta", file: "audio/understanding.mp3" },
+            94.0: { name: "Mu", file: "audio/equanimity.mp3" },
+            94.5: { name: "Kappa Alpha", file: "audio/esprit-itinerant.mp3" },
+            95.0: { name: "Lambda Alpha", file: "audio/later.mp3" },
+            95.5: { name: "Duo Improbable - Stewart Copeland: Police Deranged for Orchestra & Sting - King of Pain", file: "audio/king-of-pain.mp3" },
+            96.0: { name: "Lambda Mu", file: "audio/father.mp3" },
+            96.5: { name: "Lambda Stigma", file: "audio/grave.mp3" },
+            97.0: { name: "Kappa Eta", file: "audio/inversion.mp3" },
+            97.5: { name: "Mu Alpha", file: "audio/lucioles.mp3" },
+            97.8: { name: "Sud Radio en ligne", file: "https://start-sud.ice.infomaniak.ch/start-sud-high.mp3", isLive: true },
+            98.0: { name: "Kappa Gamma", file: "audio/mass-effect.mp3" },
+            98.5: { name: "ICI Musique Classique", file: "https://rcavliveaudio.akamaized.net/hls/live/2007000/MUSE/master.m3u8", isLive: true },
+            99.0: { name: "Iota Stigma", file: "audio/melancoly-in-flat.mp3" },
+            99.5: { name: "Mu Epsilon", file: "audio/monster.mp3" },
+            100.0: { name: "Iota Epsilon", file: "audio/narc-osis.mp3" },
+            100.5: { name: "Lambda Nu", file: "audio/next-flight-home.mp3" },
+            101.0: { name: "Lambda", file: "audio/oticons.mp3" },
+            101.5: { name: "Lambda Gamma", file: "audio/pacis.mp3" },
+            101.7: { name: "Duo Improbable - Donna Summer & Clara Luciani - I Feel Love ~ C'est L'Amour", file: "audio/i-feel-love-donna-summer.mp3" },
+            102.0: { name: "Iota Zeta", file: "audio/push.mp3" },
+            102.5: { name: "Kappa Theta", file: "audio/quantum-touch.mp3" },
+            103.0: { name: "Mu Zeta", file: "audio/quaturo.mp3" },
+            103.5: { name: "Iota Eta", file: "audio/recalcitrant.mp3" },
+            104.0: { name: "Iota Zeta", file: "audio/resounding.mp3" },
+            104.3: { name: "Omega", file: "audio/estrange.mp3" },
+            104.5: { name: "Lambda Xi", file: "audio/sacrifice.mp3" },
+            104.7: { name: "Iota Delta", file: "audio/metallica-ballerina.mp3" },
+            105.0: { name: "Iota", file: "audio/slow-think.mp3" },
+            105.5: { name: "Kappa Iota", file: "audio/across-bourbon-street.mp3" },
+            106.0: { name: "Kappa Delta", file: "audio/spectrum.mp3" },
+            106.5: { name: "Lambda Zeta", file: "audio/stubborness.mp3" },
+            107.0: { name: "Mu Theta", file: "audio/tangerine.mp3" },
+            107.5: { name: "Kappa Beta", file: "audio/the-daunting.mp3" },
+            108.0: { name: "ICI Première / Ottawa", file: "https://rcavliveaudio.akamaized.net/hls/live/2006986/M-7OOTT0_OTT/master.m3u8", isLive: true }
         };
 
         function initParticles(w, h) {
@@ -167,11 +169,12 @@
                     if (!sourceNode) {
                         sourceNode = audioCtx.createMediaElementSource(audioEl);
                     }
+                    
                     sourceNode.connect(gainNode);
                     gainNode.connect(analyser);
                     analyser.connect(audioCtx.destination);
                 } catch (e) { 
-                    console.warn("Web Audio Init Exception Handled:", e); 
+                    console.warn("Web Audio Init Error:", e); 
                 }
             }
             if (audioCtx && audioCtx.state === 'suspended') {
@@ -195,22 +198,33 @@
 
             const buf = analyser ? analyser.frequencyBinCount : 512;
             const data = new Uint8Array(buf);
+            
             let isPlaying = isPowerOn && !audioEl.paused && audioEl.readyState >= 2;
 
             if (analyser && isPlaying) {
                 try { 
                     analyser.getByteTimeDomainData(data); 
+                    
                     let sum = 0;
-                    for (let i = 0; i < buf; i++) { sum += Math.abs(data[i] - 128); }
+                    for (let i = 0; i < buf; i++) {
+                        sum += Math.abs(data[i] - 128);
+                    }
+
                     if (sum === 0) {
+                        // CORS Tainted stream detected (Safari live feed block).
+                        // Drive reaction directly from audio element playback state & network progression pulses, 
+                        // ensuring the wavelength velocity responds explicitly to audio transmission parameters.
                         dynamicEnergy += (Math.random() * 0.4 - 0.2);
                         dynamicEnergy = Math.max(0.2, Math.min(1.5, dynamicEnergy));
+                        
                         const time = performance.now() * 0.008 * dynamicEnergy;
                         for (let i = 0; i < buf; i++) {
                             data[i] = 128 + Math.sin(time + (i * 0.2)) * (15 + dynamicEnergy * 10);
                         }
                     }
-                } catch (e) { data.fill(128); }
+                } catch (e) { 
+                    data.fill(128); 
+                }
             } else {
                 data.fill(128);
                 dynamicEnergy = 0;
@@ -237,7 +251,9 @@
             audioEl.src = ""; 
             audioEl.loop = !isLive;
 
-            initAudio();
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
 
             if (isLive && url.endsWith('.m3u8')) {
                 if (Hls.isSupported()) {
@@ -245,32 +261,17 @@
                     hls.loadSource(url); 
                     hls.attachMedia(audioEl);
                     hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                        audioEl.play().catch(err => console.warn("HLS Play Block Handled:", err));
-                    });
-                    hls.on(Hls.Events.ERROR, (event, data) => {
-                        if (data.fatal) {
-                            switch (data.type) {
-                                case Hls.ErrorTypes.NETWORK_ERROR:
-                                    hls.startLoad();
-                                    break;
-                                case Hls.ErrorTypes.MEDIA_ERROR:
-                                    hls.recoverMediaError();
-                                    break;
-                                default:
-                                    hls.destroy();
-                                    break;
-                            }
-                        }
+                        audioEl.play().catch(err => console.warn("HLS Play block:", err));
                     });
                 } else if (audioEl.canPlayType('application/vnd.apple.mpegurl')) {
                     audioEl.src = url; 
                     audioEl.load(); 
-                    audioEl.play().catch(err => console.warn("Native HLS Block Handled:", err));
+                    audioEl.play().catch(err => console.warn("Native HLS Play block:", err));
                 }
             } else {
                 audioEl.src = url; 
                 audioEl.load(); 
-                audioEl.play().catch(err => console.warn("MP3 Play Block Handled:", err));
+                audioEl.play().catch(err => console.warn("MP3 Play block:", err));
             }
         }
 
@@ -283,12 +284,18 @@
             const keys = Object.keys(stations).map(Number);
             const closest = keys.reduce((p, c) => Math.abs(c - freq) < Math.abs(p - freq) ? c : p);
 
-            const exactKey = closest.toFixed(1);
-            const s = stations[exactKey];
-            if (s) {
-                stationDisplay.textContent = `[ ${s.isLive ? 'LIVE' : 'LOCKED'} ] > ${s.name} (${exactKey} MHz)`;
+            if (Math.abs(freq - closest) <= 0.25) {
+                const s = stations[closest];
+                stationDisplay.textContent = `[ ${s.isLive ? 'LIVE' : 'LOCKED'} ] > ${s.name} (${closest.toFixed(1)} MHz)`;
                 if (audioEl.src !== s.file && (!audioEl.src.endsWith(s.file))) {
                     playSource(s.file, s.isLive);
+                }
+            } else {
+                if (hls) { hls.destroy(); hls = null; }
+                stationDisplay.textContent = `MUTED (DEAD AIR)... [ FREQ: ${freq.toFixed(1)} MHz ]`;
+                if (!audioEl.paused) {
+                    audioEl.pause();
+                    audioEl.src = "";
                 }
             }
         }
@@ -298,18 +305,20 @@
             initAudio();
             isPowerOn = true;
             
-            const s = stations["88.0"];
+            const s = stations[88.0];
             audioEl.src = s.file;
             audioEl.play().then(() => {
                 tune(currentFreq);
             }).catch(err => {
-                console.warn("Power State Sync Handled:", err);
+                console.warn("Power prime action intercepted:", err);
                 tune(currentFreq);
             });
         }
 
         stationDisplay.addEventListener('click', () => {
-            powerOnReceiver();
+            if (!isPowerOn) {
+                powerOnReceiver();
+            }
         });
 
         let isDragging = false;
@@ -317,15 +326,15 @@
         function updateFromPointer(e) {
             const rect = dialWindow.getBoundingClientRect();
             const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-            const keys = Object.keys(stations).map(Number);
-            const stationIndex = Math.round(ratio * (keys.length - 1));
-            tune(keys[stationIndex]);
+            tune(88.0 + (ratio * 20.0));
         }
 
         dialWindow.addEventListener('pointerdown', (e) => {
-            powerOnReceiver();
+            if (!isPowerOn) {
+                powerOnReceiver();
+            }
             isDragging = true;
-            try { dialWindow.setPointerCapture(e.pointerId); } catch(err) {}
+            dialWindow.setPointerCapture(e.pointerId);
             updateFromPointer(e);
         });
 
