@@ -316,12 +316,15 @@
             
             const freq = Math.round(rawFreq * 10) / 10;
             currentFreq = Math.max(88.0, Math.min(108.0, freq));
-            
-            const percent = 18.0 + ((currentFreq - 88.0) / (108.0 - 88.0)) * 64.0;
-            tuningBar.style.left = `${percent}%`;
 
             const keys = Object.keys(stations).map(Number);
             const closest = keys.reduce((p, c) => Math.abs(c - currentFreq) < Math.abs(p - currentFreq) ? c : p);
+
+            // Magnetic snap when within 0.25 MHz of a defined station
+            const targetFreq = Math.abs(currentFreq - closest) <= 0.25 ? closest : currentFreq;
+            
+            const percent = 18.0 + ((targetFreq - 88.0) / (108.0 - 88.0)) * 64.0;
+            tuningBar.style.left = `${percent}%`;
 
             if (Math.abs(currentFreq - closest) <= 0.25) {
                 const keyStr = closest.toFixed(1);
