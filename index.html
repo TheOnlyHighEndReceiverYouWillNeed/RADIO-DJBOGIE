@@ -78,6 +78,7 @@
         let isPowerOn = false, particles = [];
         let currentFreq = 88.0;
         let dynamicEnergy = 0;
+        let activeFreq = null; // Track exact tuned frequency state to handle shared audio tracks
 
         const stations = {
             88.0: { name: "Pi Delta", file: "audio/absence-motive.mp3" },
@@ -214,9 +215,6 @@
                     }
 
                     if (sum === 0) {
-                        // CORS Tainted stream detected (Safari live feed block).
-                        // Drive reaction directly from audio element playback state & network progression pulses, 
-                        // ensuring the wavelength velocity responds explicitly to audio transmission parameters.
                         dynamicEnergy += (Math.random() * 0.4 - 0.2);
                         dynamicEnergy = Math.max(0.2, Math.min(1.5, dynamicEnergy));
                         
@@ -290,10 +288,14 @@
             if (Math.abs(freq - closest) <= 0.25) {
                 const s = stations[closest];
                 stationDisplay.textContent = `[ ${s.isLive ? 'LIVE' : 'LOCKED'} ] > ${s.name} (${closest.toFixed(1)} MHz)`;
-                if (audioEl.src !== s.file && (!audioEl.src.endsWith(s.file))) {
+                
+                // Tracked activeFreq check correctly handles multiple frequencies sharing the same audio asset
+                if (activeFreq !== closest) {
+                    activeFreq = closest;
                     playSource(s.file, s.isLive);
                 }
             } else {
+                activeFreq = null;
                 if (hls) { hls.destroy(); hls = null; }
                 stationDisplay.textContent = `MUTED (DEAD AIR)... [ FREQ: ${freq.toFixed(1)} MHz ]`;
                 if (!audioEl.paused) {
@@ -308,6 +310,7 @@
             initAudio();
             isPowerOn = true;
             
+            activeFreq = 88.0;
             const s = stations[88.0];
             audioEl.src = s.file;
             audioEl.play().then(() => {
